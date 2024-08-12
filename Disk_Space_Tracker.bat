@@ -134,13 +134,13 @@ $genReportButton = Add-Control "System.Windows.Forms.Button" @{
 $resetButton = Add-Control "System.Windows.Forms.Button" @{
     Location = New-Object System.Drawing.Point(191,40); Size = New-Object System.Drawing.Size(58,23); Text = "Reset"}
 $readLabel = Add-Control "System.Windows.Forms.Label" @{
-    Location = New-Object System.Drawing.Point(259,110); Size = New-Object System.Drawing.Size(83,14); Text = "R: 0 MBs"; ForeColor = $darkForeground; Font = New-Object System.Drawing.Font("Cascadia Code",7)}
+    Location = New-Object System.Drawing.Point(259,110); Size = New-Object System.Drawing.Size(83,14); Text = "R: 0 MBs"; ForeColor = $darkForeground; Font = New-Object System.Drawing.Font("Consolas",7)}
 $writeLabel = Add-Control "System.Windows.Forms.Label" @{
-    Location = New-Object System.Drawing.Point(259,126); Size = New-Object System.Drawing.Size(83,14); Text = "W: 0 MBs"; ForeColor = $darkForeground; Font = New-Object System.Drawing.Font("Cascadia Code",7)}
+    Location = New-Object System.Drawing.Point(259,126); Size = New-Object System.Drawing.Size(83,14); Text = "W: 0 MBs"; ForeColor = $darkForeground; Font = New-Object System.Drawing.Font("Consolas",7)}
 $includeUnitCheckBox = Add-Control "System.Windows.Forms.CheckBox" @{
     Location = New-Object System.Drawing.Point(261,40); Size = New-Object System.Drawing.Size(83,23); Text = "Copy unit"; Checked = $true; ForeColor = $darkForeground}
 $timerLabel = Add-Control "System.Windows.Forms.Label" @{
-    Location = New-Object System.Drawing.Point(259,80); Size = New-Object System.Drawing.Size(80,23); Text = "T: 00:00:00"; Font = New-Object System.Drawing.Font("Consolas",7)}
+    Location = New-Object System.Drawing.Point(259,80); Size = New-Object System.Drawing.Size(80,23); Text = "00:00:00"; Font = New-Object System.Drawing.Font("Consolas",7)}
 
 $labels = @(
     @{Text="Initial free space:"; Y=80}, @{Text="Current free space:"; Y=120},
@@ -396,15 +396,15 @@ function Show-ExecInterface {
     $textBox_Line_Content = Create-Control "System.Windows.Forms.TextBox" "" 150 ($yPos - 3) 239 20
     Set-CommonProperties $textBox_Line_Content
     $yPos += 20
-    $line_number_Label = Create-Control "System.Windows.Forms.Label" "Line n°" 10 ($yPos + 2) 47 20
+    $line_number_Label = Create-Control "System.Windows.Forms.Label" "Line n$([char]176)" 10 ($yPos + 2) 47 20
     $line_number_Label.ForeColor = [System.Drawing.ColorTranslator]::FromHtml("#ebdebf")
     $textBox_Line = Create-Control "System.Windows.Forms.TextBox" "" 57 ($yPos - 1) 26 20
     Set-CommonProperties $textBox_Line
     $radioButtons = @(
         @("Equal", "=", 100, 32),
-        @("Contains", "✶", 141, 34),
+        @("Contains", "$([char]10038)", 141, 34),
         @("NOT_Equal", "$([char]33)=", 186, 40),
-        @("NOT_Contains", "$([char]33)✶", 232, 44),
+        @("NOT_Contains", "$([char]33)$([char]10038)", 232, 44)
         @("StartsWith", "Start", 283, 54),
         @("EndsWith", "End", 345, 60)
     )
@@ -560,7 +560,7 @@ function Get-FreeSpace { return [math]::Round((Get-PSDrive $script:selectedDrive
 
 
 
-function Format-ElapsedTime ([TimeSpan]$ts) { return "T: {0:00}:{1:00}:{2:00}" -f $ts.Hours, $ts.Minutes, $ts.Seconds }
+function Format-ElapsedTime ([TimeSpan]$ts) { return "{0:00}:{1:00}:{2:00}" -f $ts.Hours, $ts.Minutes, $ts.Seconds }
 
 function Update-Display {
     $currentFreeSpace = Get-FreeSpace
