@@ -326,7 +326,7 @@ function Show-AutoInterface {
     }
     # Si le panel Auto est vide, ajoutez les contrôles
     if ($AutoPanel.Controls.Count -eq 0) {
-        $backButton = Create-Control "System.Windows.Forms.Button" "Back" 10 40 90 25
+        $backButton = Create-Control "System.Windows.Forms.Button" ($([char]0x2B9C) +"    Back") 10 40 90 25
         $backButton.Add_Click({
             $AutoPanel.Visible = $false
             $mainPanel.Visible = $true
