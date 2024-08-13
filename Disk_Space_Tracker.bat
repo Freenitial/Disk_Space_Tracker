@@ -51,7 +51,7 @@ $loadingLabel.Text = "Loading interface..."
 
 
 
-$script:timer = $null; $script:isRecording = $false; $script:initialFreeSpace = 0
+$script:timer = $null; $script:isStarting = $false; $script:initialFreeSpace = 0
 $script:maxDiffAdded = $script:maxDiffDeleted = $script:currentDiffBytes = $script:currentDiffMB = $script:currentDiffGB = 0
 $script:elapsedTime = [TimeSpan]::Zero; $script:lastTickTime = $null
 $script:isDragging = $false
@@ -77,6 +77,7 @@ $titleLabel.Text = "Disk Space Tracker"; $titleLabel.ForeColor = $darkForeground
 $titleLabel.Font = [System.Drawing.Font]::new("Arial", 12, [System.Drawing.FontStyle]::Bold)
 $titleLabel.AutoSize = $true; $titleLabel.Location = [System.Drawing.Point]::new(10, 5)
 $titleBar.Controls.Add($titleLabel)
+
 
 function Add-TitleBarButton($text, $size, $location, $onClick) {
     $button = New-Object System.Windows.Forms.Button
@@ -109,6 +110,17 @@ $form.Controls.Add($titleBar)
 $launch_progressBar.Value = 50
 $loadingLabel.Text = "Loading interface..."
 
+
+$mainPanel = New-Object System.Windows.Forms.Panel
+$mainPanel.Dock = [System.Windows.Forms.DockStyle]::Fill
+$form.Controls.Add($mainPanel)
+
+$AutoPanel = New-Object System.Windows.Forms.Panel
+$AutoPanel.Dock = [System.Windows.Forms.DockStyle]::Fill
+$AutoPanel.Visible = $false
+$form.Controls.Add($AutoPanel)
+
+
 function Add-Control ($type, $props) {
     $control = New-Object $type
     $props.GetEnumerator() | ForEach-Object { $control.$($_.Key) = $_.Value }
@@ -121,14 +133,14 @@ function Add-Control ($type, $props) {
         $control.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
         $control.BackColor = $darkBackground; $control.ForeColor = $darkForeground
     }
-    [void] $form.Controls.Add($control)
+    [void] $mainPanel.Controls.Add($control)
     return $control
 }
 
-$recordButton = Add-Control "System.Windows.Forms.Button" @{
-    Location = New-Object System.Drawing.Point(10,40); Size = New-Object System.Drawing.Size(58,23); Text = "Record"}
-$ExecButton = Add-Control "System.Windows.Forms.Button" @{
-    Location = New-Object System.Drawing.Point(67,40); Size = New-Object System.Drawing.Size(58,23); Text = "Exec"}
+$StartButton = Add-Control "System.Windows.Forms.Button" @{
+    Location = New-Object System.Drawing.Point(10,40); Size = New-Object System.Drawing.Size(58,23); Text = "Start"}
+$AutoButton = Add-Control "System.Windows.Forms.Button" @{
+    Location = New-Object System.Drawing.Point(67,40); Size = New-Object System.Drawing.Size(58,23); Text = "Auto"}
 $genReportButton = Add-Control "System.Windows.Forms.Button" @{
     Location = New-Object System.Drawing.Point(134,40); Size = New-Object System.Drawing.Size(58,23); Text = "Report"}
 $resetButton = Add-Control "System.Windows.Forms.Button" @{
@@ -140,7 +152,7 @@ $writeLabel = Add-Control "System.Windows.Forms.Label" @{
 $includeUnitCheckBox = Add-Control "System.Windows.Forms.CheckBox" @{
     Location = New-Object System.Drawing.Point(261,40); Size = New-Object System.Drawing.Size(83,23); Text = "Copy unit"; Checked = $true; ForeColor = $darkForeground}
 $timerLabel = Add-Control "System.Windows.Forms.Label" @{
-    Location = New-Object System.Drawing.Point(259,80); Size = New-Object System.Drawing.Size(80,23); Text = "00:00:00"; Font = New-Object System.Drawing.Font("Consolas",7)}
+    Location = New-Object System.Drawing.Point(259,80); Size = New-Object System.Drawing.Size(80,23); Text = "00:00:00"; Font = New-Object System.Drawing.Font("Consolas",9)}
 
 $labels = @(
     @{Text="Initial free space:"; Y=80}, @{Text="Current free space:"; Y=120},
@@ -295,173 +307,152 @@ function Browse-Process {
 ##############################################################################################################################################
 ##############################################################################################################################################
 
-function Show-ExecInterface {
-    $execForm = New-Object System.Windows.Forms.Form
-    $execForm.Text = "Exec Interface"
-    $execForm.Size = New-Object System.Drawing.Size(535,245)
-    $execForm.StartPosition = "Manual"
-    $execForm.Location = $form.PointToScreen([System.Drawing.Point]::new(0, 30))
-    $execForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::None
-    $execForm.BackColor = $darkBackground
-    $execForm.Opacity = 0.95
-    $contentPanel = New-Object System.Windows.Forms.Panel
-    $contentPanel.Dock = [System.Windows.Forms.DockStyle]::Fill
-    $contentPanel.Padding = New-Object System.Windows.Forms.Padding(0, 0, 0, 30)
-    $execForm.Controls.Add($contentPanel)
-    $backButton = New-Object System.Windows.Forms.Button
-    $backButton.Text = "Back"
-    $backButton.Size = New-Object System.Drawing.Size(80, 20)
-    $backButton.Location = New-Object System.Drawing.Point(10, 10)
-    $backButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-    $backButton.BackColor = $buttonColor
-    $backButton.ForeColor = $darkForeground
-    $backButton.Add_Click({ $execForm.Close() })
-    $contentPanel.Controls.Add($backButton)
-    $waitLabel = New-Object System.Windows.Forms.Label
-    $waitLabel.Text = "NOT IMPLEMENTED Conditions to Freeze:"
-    $waitLabel.Font = [System.Drawing.Font]::new("Arial", 10, [System.Drawing.FontStyle]::Bold)
-    $waitLabel.Location = New-Object System.Drawing.Point(147, 11)
-    $waitLabel.Size = New-Object System.Drawing.Size(180, 20)
-    $waitLabel.ForeColor = $darkForeground
-    $contentPanel.Controls.Add($waitLabel)
-    $checkBoxes = @(
-        "Exec and wait end", "File exist", "File not exist", "File not used", "File used",
-        "Process exist", "Process not exist"
-    )
-    $yPos = 40
-    foreach ($text in $checkBoxes) {
-        $checkBox = New-Object System.Windows.Forms.CheckBox
-        $checkBox.Text = $text
-        $checkBox.Location = New-Object System.Drawing.Point(10, $yPos)
-        $checkBox.Size = New-Object System.Drawing.Size(137, 20)
-        $checkBox.ForeColor = $darkForeground
-        $checkBox.Add_CheckedChanged({ Update-Conditions })
-        $contentPanel.Controls.Add($checkBox)
-        $textBox = New-Object System.Windows.Forms.TextBox
-        $textBox.Location = New-Object System.Drawing.Point(150, ($yPos - 1))
-        $textBox.Size = New-Object System.Drawing.Size(181, 20)
-        $textBox.BackColor = $darkBackground
-        $textBox.ForeColor = $darkForeground
-        $textBox.Name = "TextBox_$($checkBoxes.IndexOf($text))"
-        $contentPanel.Controls.Add($textBox)
-        $browseButton = New-Object System.Windows.Forms.Button
-        $browseButton.Text = "Browse"
-        $browseButton.Location = New-Object System.Drawing.Point(330, ($yPos - 1))
-        $browseButton.Size = New-Object System.Drawing.Size(59, 20)
-        $browseButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-        $browseButton.BackColor = $buttonColor
-        $browseButton.ForeColor = $darkForeground
-        # Utiliser une closure pour capturer la référence correcte du TextBox
-        $scriptBlock = {
-            param($associatedTextBox, $labelText)
-            # Vérification du texte du label pour déterminer si on doit ouvrir la boîte de dialogue des processus ou des fichiers
-            if ($labelText.ToLower().Contains("process")) {
-                Browse-Process -associatedTextBox $associatedTextBox
-            } else {
-                Browse-File -associatedTextBox $associatedTextBox
-            }
-        }.GetNewClosure()
-        # Attach the click event with the correct TextBox and label text
-        $browseButton.Add_Click($ExecutionContext.InvokeCommand.NewScriptBlock("& {$scriptBlock} `$this.Parent.Controls['$($textBox.Name)'] `'$($checkBox.Text)'"))
-        $contentPanel.Controls.Add($browseButton)
-        $yPos += 20
-    }
-
-    #==================================================================
+function Show-AutoInterface {
+    $mainPanel.Visible = $false
+    $AutoPanel.Visible = $true
     function Create-Control($type, $text, $x, $y, $width, $height) {
         $control = New-Object $type
         $control.Text = $text
         $control.Location = New-Object System.Drawing.Point($x, $y)
         $control.Size = New-Object System.Drawing.Size($width, $height)
-        $control.ForeColor = $darkForeground
-        $contentPanel.Controls.Add($control)
-        return $control
-    }
-    function Set-CommonProperties($control) {
         $control.BackColor = $darkBackground
         $control.ForeColor = $darkForeground
+        if ($control -is [System.Windows.Forms.Button]) {
+            $control.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+            $control.BackColor = $buttonColor
+        }
+        $AutoPanel.Controls.Add($control)
+        return $control
     }
-    $CheckboxlineLabel = Create-Control "System.Windows.Forms.CheckBox" "Analyze text file" 10 $yPos 135 20
-    $CheckboxlineLabel.ForeColor = [System.Drawing.ColorTranslator]::FromHtml("#ebdebf")
-    $textBox_Line_Browse = Create-Control "System.Windows.Forms.TextBox" "" 150 ($yPos - 1) 181 20
-    Set-CommonProperties $textBox_Line_Browse
-    $textBox_Line_Browse.Name = "TextBox_Line_Browse"
-    $browseButton_Line = Create-Control "System.Windows.Forms.Button" "Browse" 330 ($yPos - 1) 59 20
-    $browseButton_Line.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-    $browseButton_Line.BackColor = $buttonColor
-    $browseButton_Line.Add_Click({ Browse-File -associatedTextBox $textBox_Line_Browse })
-    $yPos += 21
-    $ContentlineLabel = Create-Control "System.Windows.Forms.Label" "Content to search :" 10 $yPos 135 20
-    $ContentlineLabel.ForeColor = [System.Drawing.ColorTranslator]::FromHtml("#ebdebf")
-    $textBox_Line_Content = Create-Control "System.Windows.Forms.TextBox" "" 150 ($yPos - 3) 239 20
-    Set-CommonProperties $textBox_Line_Content
-    $yPos += 20
-    $line_number_Label = Create-Control "System.Windows.Forms.Label" "Line n$([char]176)" 10 ($yPos + 2) 47 20
-    $line_number_Label.ForeColor = [System.Drawing.ColorTranslator]::FromHtml("#ebdebf")
-    $textBox_Line = Create-Control "System.Windows.Forms.TextBox" "" 57 ($yPos - 1) 26 20
-    Set-CommonProperties $textBox_Line
-    $radioButtons = @(
-        @("Equal", "=", 100, 32),
-        @("Contains", "$([char]10038)", 141, 34),
-        @("NOT_Equal", "$([char]33)=", 186, 40),
-        @("NOT_Contains", "$([char]33)$([char]10038)", 232, 44)
-        @("StartsWith", "Start", 283, 54),
-        @("EndsWith", "End", 345, 60)
-    )
+    # Si le panel Auto est vide, ajoutez les contrôles
+    if ($AutoPanel.Controls.Count -eq 0) {
+        $backButton = Create-Control "System.Windows.Forms.Button" "Back" 10 40 90 25
+        $backButton.Add_Click({
+            $AutoPanel.Visible = $false
+            $mainPanel.Visible = $true
+        })
 
-    foreach ($rb in $radioButtons) {
-        ${"radioButton_$($rb[0])"} = Create-Control "System.Windows.Forms.RadioButton" $rb[1] ([int]$rb[2]) $yPos ([int]$rb[3]) 20
+        $yPos = 15
+        $Trigger_groupBox = New-Object System.Windows.Forms.GroupBox
+        $Trigger_groupBox.Size = New-Object System.Drawing.Size(90, 101)
+        $Trigger_groupBox.Location = New-Object System.Drawing.Point(10, 57)
+        $Trigger_groupBox_Label = Create-Control "System.Windows.Forms.Label" "Trigger :" 5 $yPos 80 17
+        $Trigger_groupBox_Label.Font = [System.Drawing.Font]::new("Arial", 8, [System.Drawing.FontStyle]::Bold)
+        $radioButton_Freeze = Create-Control "System.Windows.Forms.RadioButton" "Freeze" 5 ($yPos + 21) 80 20
+        $radioButton_Start = Create-Control "System.Windows.Forms.RadioButton" "Start" 5 ($yPos + 39) 80 20
+        $radioButton_Re_Start = Create-Control "System.Windows.Forms.RadioButton" "Re-Start" 5 ($yPos + 58) 80 20
+        $Trigger_groupBox.Controls.AddRange(@($Trigger_groupBox_Label, $radioButton_Start, $radioButton_Freeze, $radioButton_Re_Start))
+        $AutoPanel.Controls.Add($Trigger_groupBox)
+
+        $All_or_Any_groupBox = New-Object System.Windows.Forms.GroupBox
+        $All_or_Any_groupBox.Size = New-Object System.Drawing.Size(90, 85)
+        $All_or_Any_groupBox.Location = New-Object System.Drawing.Point(10, 150)
+        $All_or_Any_groupBox_Label = Create-Control "System.Windows.Forms.Label" "Logic :" 5 $yPos 80 19
+        $All_or_Any_groupBox_Label.Font = [System.Drawing.Font]::new("Arial", 8, [System.Drawing.FontStyle]::Bold)
+        $radioButton_All_Selected = Create-Control "System.Windows.Forms.RadioButton" "All (and)" 5 ($yPos + 21) 80 20
+        $radioButton_Any_Selected = Create-Control "System.Windows.Forms.RadioButton" "Any (or)" 5 ($yPos + 40) 80 20
+        $All_or_Any_groupBox.Controls.AddRange(@($All_or_Any_groupBox_Label, $radioButton_All_Selected, $radioButton_Any_Selected))
+        $AutoPanel.Controls.Add($All_or_Any_groupBox)
+
+        $EnableAuto_Checkbox = Create-Control "System.Windows.Forms.Button" "Enable" 10 234 90 30
+        $EnableAuto_Checkbox.Font = [System.Drawing.Font]::new("Arial", 9, [System.Drawing.FontStyle]::Bold)
+        $Report_Checkbox = Create-Control "System.Windows.Forms.CheckBox" "Gen Report" 10 208 100 20
+        $Report_Checkbox.Add_CheckedChanged({ Update-Conditions })
+
+        $waitLabel = Create-Control "System.Windows.Forms.Label" "NOT IMPLEMENTED" 117 40 180 20
+        $waitLabel.Font = [System.Drawing.Font]::new("Arial", 10, [System.Drawing.FontStyle]::Bold)
+        $waitLabel.ForeColor = [System.Drawing.ColorTranslator]::FromHtml("#ffffff")
+        $checkBoxes = @("File exist", "File used", "Process exist", "Reg key exist")
+        $xPos = 115; $yPos = 103
+        $ExeclineLabel = Create-Control "System.Windows.Forms.CheckBox" "Execute, then wait closing" $xPos $yPos 185 20
+        $ExecLinePath = Create-Control "System.Windows.Forms.TextBox" "" ($xPos + 190) $yPos 156 20
+        $ExecbrowseButton = Create-Control "System.Windows.Forms.Button" "Browse" ($xPos + 345) $yPos 59 20
+        $ExecbrowseButton.Add_Click({ Browse-File -associatedTextBox $ExecLinePath })
+        $yPos += 20
+        
+        foreach ($text in $checkBoxes) {
+            $checkBox = Create-Control "System.Windows.Forms.CheckBox" $text $xPos $yPos 108 20
+            $checkBox.Add_CheckedChanged({ Update-Conditions })
+            $groupBox_YesNo = New-Object System.Windows.Forms.GroupBox
+            $groupBox_YesNo.Size = New-Object System.Drawing.Size(80, 22)
+            $groupBox_YesNo.Location = New-Object System.Drawing.Point(($xPos + 108), ($yPos-5))
+            $radioButton_Yes = Create-Control "System.Windows.Forms.RadioButton" $([char]0x2713) 0 4 40 20
+            $radioButton_No = Create-Control "System.Windows.Forms.RadioButton" $([char]0x2717) 40 4 40 20
+            $groupBox_YesNo.Controls.AddRange(@($radioButton_Yes, $radioButton_No))
+            $AutoPanel.Controls.Add($groupBox_YesNo)
+            $textBox = Create-Control "System.Windows.Forms.TextBox" "" ($xPos + 190) ($yPos - 1) 156 20
+            $textBox.Name = "TextBox_$($checkBoxes.IndexOf($text))"
+            $browseButton = Create-Control "System.Windows.Forms.Button" "Browse" ($xPos + 345) ($yPos - 1) 59 20
+            # Utiliser une closure pour capturer la référence correcte du TextBox
+            $scriptBlock = {
+                param($associatedTextBox, $labelText)
+                # Vérification du texte du label pour déterminer si on doit ouvrir la boîte de dialogue des processus ou des fichiers
+                if ($labelText.ToLower().Contains("process")) {
+                    Browse-Process -associatedTextBox $associatedTextBox
+                } else {
+                    Browse-File -associatedTextBox $associatedTextBox
+                }
+            }.GetNewClosure()
+            # Attach the click event with the correct TextBox and label text
+            $browseButton.Add_Click($ExecutionContext.InvokeCommand.NewScriptBlock("& {$scriptBlock} `$this.Parent.Controls['$($textBox.Name)'] `'$($checkBox.Text)'"))
+            $AutoPanel.Controls.Add($browseButton)
+            $yPos += 20
+        }
+
+        #========================== UI - Analyze Text File ==========================
+        $CheckboxlineLabel = Create-Control "System.Windows.Forms.CheckBox" "Analyze text file" $xPos $yPos 121 20
+        $CheckboxlineLabel.ForeColor = [System.Drawing.ColorTranslator]::FromHtml("#ebdebf")
+        $textBox_Line_Browse = Create-Control "System.Windows.Forms.TextBox" "" ($xPos + 190) ($yPos - 1) 156 20
+        $textBox_Line_Browse.Name = "TextBox_Line_Browse"
+        $browseButton_Line = Create-Control "System.Windows.Forms.Button" "Browse" ($xPos + 345) ($yPos - 1) 59 20
+        $browseButton_Line.Add_Click({ Browse-File -associatedTextBox $textBox_Line_Browse })
+        $yPos += 21; $xPos += 17
+        $ContentlineLabel = Create-Control "System.Windows.Forms.Label" "Content to search :" ($xPos) $yPos 117 20
+        $ContentlineLabel.ForeColor = [System.Drawing.ColorTranslator]::FromHtml("#ebdebf")
+        $textBox_Line_Content = Create-Control "System.Windows.Forms.TextBox" "" ($xPos + 173) ($yPos - 3) 214 20
+        $yPos += 20
+        $line_number_Label = Create-Control "System.Windows.Forms.Label" "At line n$([char]176)" $xPos ($yPos + 2) 60 20
+        $line_number_Label.ForeColor = [System.Drawing.ColorTranslator]::FromHtml("#ebdebf")
+        $textBox_Line = Create-Control "System.Windows.Forms.TextBox" "" ($xPos + 60) ($yPos - 1) 30 20
+        $xPos += 25
+        $radioButtons = @(
+            @("Equal", "=", ($xPos + 83), 32),
+            @("Contains", "$([char]33)=", ($xPos + 123), 40),
+            @("NOT_Equal", "$([char]10038)", ($xPos + 168), 34),
+            @("NOT_Contains", "$([char]33)$([char]10038)", ($xPos + 212), 44)
+            @("StartsWith", "Start", ($xPos + 260), 54),
+            @("EndsWith", "End", ($xPos + 317), 60)
+        )
+        foreach ($rb in $radioButtons) {
+            ${"radioButton_$($rb[0])"} = Create-Control "System.Windows.Forms.RadioButton" $rb[1] ([int]$rb[2]) $yPos ([int]$rb[3]) 20
+        }
+        #=============================================================================
     }
-    #==================================================================
-
-    $checkBox_Report = New-Object System.Windows.Forms.CheckBox
-    $checkBox_Report.Text = "Gen Report"
-    $checkBox_Report.Location = New-Object System.Drawing.Point(420, 100)
-    $checkBox_Report.Size = New-Object System.Drawing.Size(100, 20)
-    $checkBox_Report.ForeColor = $darkForeground
-    $checkBox_Report.Add_CheckedChanged({ Update-Conditions })
-    $contentPanel.Controls.Add($checkBox_Report)
-    $startExecButton = New-Object System.Windows.Forms.Button
-    $startExecButton.Text = "Record"
-    $startExecButton.Location = New-Object System.Drawing.Point(420, 125)
-    $startExecButton.Size = New-Object System.Drawing.Size(90, 30)
-    $startExecButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-    $startExecButton.BackColor = $buttonColor
-    $startExecButton.ForeColor = $darkForeground
-    $startExecButton.Add_Click({ $execForm.Close() })
-    $contentPanel.Controls.Add($startExecButton)
-    $execForm.Add_Shown({ $execForm.Activate() })
-    $execForm.ShowDialog($form)
 }
 
 function Browse-File {
-    param (
-        [System.Windows.Forms.TextBox]$associatedTextBox
-    )
-    $dialog = New-Object System.Windows.Forms.OpenFileDialog
-    $dialog.InitialDirectory = [Environment]::GetFolderPath('Desktop')
-    $dialog.Filter = "All Files (*.*)|*.*"
-    $dialog.Multiselect = $false
-    $dialog.Title = "Select a File or Folder"
-    $dialog.ValidateNames = $false
-    $dialog.CheckFileExists = $false
-    $dialog.CheckPathExists = $true
-    $dialog.FileName = "This Folder"
-    if ($dialog.ShowDialog() -eq 'OK') {
-        $selectedPath = $dialog.FileName
-        if ($selectedPath.EndsWith("\This Folder")) {
-            $selectedPath = [System.IO.Path]::GetDirectoryName($selectedPath)
+    param ( [System.Windows.Forms.TextBox]$associatedTextBox )
+    try {
+        $dialog = New-Object System.Windows.Forms.OpenFileDialog; $dialog.InitialDirectory = [Environment]::GetFolderPath('Desktop')
+        $dialog.Filter = "All Files (*.*)|*.*"; $dialog.Multiselect = $false; $dialog.Title = "Select a File or Folder"
+        $dialog.ValidateNames = $false; $dialog.CheckFileExists = $false; $dialog.CheckPathExists = $true
+        $dialog.FileName = "Current Folder"
+        if ($dialog.ShowDialog() -eq 'OK') {
+            $selectedPath = $dialog.FileName
+            if ($selectedPath.EndsWith("\Current Folder")) { $selectedPath = [System.IO.Path]::GetDirectoryName($selectedPath) }
+            if ($selectedPath.EndsWith(".lnk")) {
+                $shell = New-Object -ComObject WScript.Shell
+                $shortcut = $shell.CreateShortcut($selectedPath)
+                $selectedPath = $shortcut.TargetPath
+            }
+            if ([System.IO.Directory]::Exists($selectedPath) -or [System.IO.File]::Exists($selectedPath)) {
+                $associatedTextBox.Text = $selectedPath
+            } else {
+                $associatedTextBox.Text = $selectedPath
+            }
         }
-        if ([System.IO.Directory]::Exists($selectedPath)) {
-            # Un dossier a été sélectionné
-            $associatedTextBox.Text = $selectedPath
-        } elseif ([System.IO.File]::Exists($selectedPath)) {
-            # Un fichier a été sélectionné
-            $associatedTextBox.Text = $selectedPath
-        } else {
-            # Le chemin sélectionné n'existe pas (probablement un nouveau fichier)
-            $associatedTextBox.Text = $selectedPath
-        }
+    } catch {
+        $associatedTextBox.Text = "ERROR"
     }
 }
 
@@ -482,8 +473,8 @@ function Start-ConditionCheck {
     Write-Host "All conditions met!"
 }
 
-$ExecButton.Add_Click({
-    Show-ExecInterface
+$AutoButton.Add_Click({
+    Show-AutoInterface
 })
 
 ##############################################################################################################################################
@@ -589,8 +580,8 @@ function Update-Display {
 
 $resetButton.Add_Click({
     if ($script:timer) { $script:timer.Stop(); $script:timer.Dispose(); $script:timer = $null }
-    $script:isRecording = $false
-    $recordButton.Text = "Record"
+    $script:isStarting = $false
+    $StartButton.Text = "Start"
     $script:initialFreeSpace = Get-FreeSpace
     $textBoxes[1].Text = if ($script:initialFreeSpace -gt 1000) { "$([math]::Round($script:initialFreeSpace / 1024, 2)) GB" } else { "$script:initialFreeSpace MB" }
     $textBoxes[0].Text = $textBoxes[2].Text = $textBoxes[3].Text = $textBoxes[4].Text = $null
@@ -600,16 +591,16 @@ $resetButton.Add_Click({
     $driveComboBox.Enabled = $true
 })
 
-$recordButton.Add_Click({
-    if ($script:isRecording) {
+$StartButton.Add_Click({
+    if ($script:isStarting) {
         $script:timer.Stop()
-        $recordButton.Text = "Resume"
-        $script:isRecording = $false
-    } elseif ($recordButton.Text -eq "Resume") {
+        $StartButton.Text = "Resume"
+        $script:isStarting = $false
+    } elseif ($StartButton.Text -eq "Resume") {
         $script:lastTickTime = [DateTime]::Now
         $script:timer.Start()
-        $recordButton.Text = "Freeze"
-        $script:isRecording = $true
+        $StartButton.Text = "Freeze"
+        $script:isStarting = $true
     } else {
         $script:initialFreeSpace = Get-FreeSpace
         $textBoxes[0].Text = if ($script:initialFreeSpace -gt 1000) { "$([math]::Round($script:initialFreeSpace / 1024, 2)) GB" } else { "$script:initialFreeSpace MB" }
@@ -627,8 +618,8 @@ $recordButton.Add_Click({
             Update-Display
         })
         $script:timer.Start()
-        $recordButton.Text = "Freeze"
-        $script:isRecording = $true
+        $StartButton.Text = "Freeze"
+        $script:isStarting = $true
         $driveComboBox.Enabled = $false
     }
 })
