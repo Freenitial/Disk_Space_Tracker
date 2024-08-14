@@ -347,7 +347,7 @@ $genReportButton = Create-Control $mainPanel "Button" "Report" 134 40 58 23
 $resetButton = Create-Control $mainPanel "Button" "Reset" 191 40 58 23
 $readLabel = Create-Control $mainPanel "Label" "R: 0 MBs" 259 110 83 14 'Font=New-Object System.Drawing.Font("Consolas",7)'
 $writeLabel = Create-Control $mainPanel "Label" "W: 0 MBs" 259 126 83 14 'Font=New-Object System.Drawing.Font("Consolas",7)'
-$includeUnitCheckBox = Create-Control $mainPanel "CheckBox" "Copy unit" 261 40 83 23 "Checked = $false"
+$includeUnitCheckBox = Create-Control $mainPanel "CheckBox" "Copy unit" 261 40 83 23 "Checked = $null"
 $timerLabel = Create-Control $mainPanel "Label" "00:00:00" 259 80 80 23 'Font = New-Object System.Drawing.Font("Consolas",9)'
 
 
