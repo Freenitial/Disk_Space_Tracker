@@ -2,8 +2,8 @@
     @echo off & chcp 65001 >nul & cd /d "%~dp0" & Title Disk Space Tracker
 
     ::========= SETTINGS =========
-    set "Powershell_WindowStyle=Normal"  :: Normal, Hidden, Minimized, Maximized
-    set "Keep_Open=true"                 :: Keep showing PowerShell console when script exit or crash
+    set "Powershell_WindowStyle=Hidden"  :: Normal, Hidden, Minimized, Maximized
+    set "Keep_Open=false"                 :: Keep showing PowerShell console when script exit or crash
     set "Show_Loading=true"              :: Show cmd while preparing powershell
     set "Ensure_Local_Running=true"      :: If not launched from disk 'C', Re-Write in %temp% then execute
         set "Show_Writing_Lines=false"   :: Show lines writing in %temp% while preparing powershell
