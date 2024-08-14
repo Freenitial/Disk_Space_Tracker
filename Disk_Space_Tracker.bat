@@ -44,7 +44,7 @@ Add-Type -TypeDefinition 'using System.Runtime.InteropServices; public class Dpi
 
 
 
-#======================= LOADING WINDOW =======================
+#==================== LOADING WINDOW ====================
 
 $loadingForm = New-Object System.Windows.Forms.Form; $loadingForm.Text = "Loading interface..."
 $loadingForm.Size = New-Object System.Drawing.Size(300,100); $loadingForm.StartPosition = "CenterScreen"
@@ -60,7 +60,7 @@ $loadingForm.Show(); $loadingForm.Refresh()
 
 
 
-#======================= GLOBAL VARS =======================
+#===================== GLOBAL VARS =====================
 
 $launch_progressBar.Value = 10
 $loadingLabel.Text = "Loading Global Vars..."
@@ -83,7 +83,7 @@ $buttonColor = [System.Drawing.Color]::FromArgb(60, 60, 60)
 
 
 
-#======================= MAIN WINDOW =======================
+#===================== MAIN WINDOW =====================
 
 $launch_progressBar.Value = 15
 $loadingLabel.Text = "Loading Main Window..."
@@ -131,7 +131,7 @@ $form.Controls.Add($titleBar)
 
 
 
-#======================= INIT PANELS =======================
+#====================== INIT PANELS ======================
 
 $launch_progressBar.Value = 25
 $loadingLabel.Text = "Loading Main Panels..."
@@ -148,7 +148,7 @@ $form.Controls.Add($AutoPanel)
 
 
 
-#======================= FUNCTIONS =======================
+#==================== GLOBAL FUNCTIONS ====================
 
 $launch_progressBar.Value = 30
 $loadingLabel.Text = "Loading Functions..."
@@ -334,7 +334,7 @@ function Update-Display {
 
 
 
-#======================= [INTERFACE] MAIN PANEL =======================
+#==================== [INTERFACE] MAIN PANEL ====================
 
 $launch_progressBar.Value = 50
 $loadingLabel.Text = "Loading Main Panel..."
@@ -392,7 +392,7 @@ $driveComboBox.Add_SelectedIndexChanged({
 
 
 
-#======================= [INTERFACE] AUTO PANEL =======================
+#==================== [INTERFACE] AUTO PANEL ====================
 
 $launch_progressBar.Value = 60
 $loadingLabel.Text = "Loading Auto Panel..."
@@ -559,7 +559,7 @@ $AutoButton.Add_Click({
 
 
 
-#======================= [INTERFACE] CONVERTER =======================
+#==================== [INTERFACE] CONVERTER ====================
 
 $launch_progressBar.Value = 70
 $loadingLabel.Text = "Loading Unit Converter..."
@@ -725,7 +725,7 @@ $form.Add_Shown({
 
 
 
-#======================= FIRST ACTIONS =======================
+#==================== FIRST ACTIONS ====================
 
 [math]::Round($difference * 1MB / 1000) * 1000
 $script:initialFreeSpace = Get-FreeSpace
