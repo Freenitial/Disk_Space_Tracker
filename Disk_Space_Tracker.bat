@@ -14,7 +14,7 @@
     if "%Show_Writing_Lines%"=="true" set "Show_Loading=true"
     if "%Debug_Writting_Lines%"=="true" set "Show_Loading=true" && set "Show_Writing_Lines=true"
     if "%Show_Loading%"=="false" (
-        if not DEFINED IS_MINIMIZED set IS_MINIMIZED=1 && start "" /min "%~dpnx0" %* && exit
+        if not DEFINED IS_MINIMIZED set IS_MINIMIZED=1 && start "" /min "%~f0" %* && exit
         ) else (if "%Show_Writing_Lines%"=="false" if "%Powershell_WindowStyle%"=="Hidden" mode con: cols=55 lines=3)
     echo. & echo  Loading...
 ;   if "%Ensure_Local_Running%"=="true" if "%~d0" NEQ "C:" ((
@@ -44,7 +44,7 @@ Add-Type -TypeDefinition 'using System.Runtime.InteropServices; public class Dpi
 
 
 
-#==================== LOADING WINDOW ====================
+#==================== POPUP LOADING ====================
 
 $loadingForm = New-Object System.Windows.Forms.Form; $loadingForm.Text = "Loading interface..."
 $loadingForm.Size = New-Object System.Drawing.Size(300,100); $loadingForm.StartPosition = "CenterScreen"
@@ -339,14 +339,18 @@ function Update-Display {
 $launch_progressBar.Value = 50
 $loadingLabel.Text = "Loading Main Panel..."
 
+
+
 $StartButton = Create-Control $mainPanel "Button" "Start" 10 40 58 23
 $AutoButton = Create-Control $mainPanel "Button" "Auto" 67 40 58 23
 $genReportButton = Create-Control $mainPanel "Button" "Report" 134 40 58 23
 $resetButton = Create-Control $mainPanel "Button" "Reset" 191 40 58 23
 $readLabel = Create-Control $mainPanel "Label" "R: 0 MBs" 259 110 83 14 'Font=New-Object System.Drawing.Font("Consolas",7)'
 $writeLabel = Create-Control $mainPanel "Label" "W: 0 MBs" 259 126 83 14 'Font=New-Object System.Drawing.Font("Consolas",7)'
-$includeUnitCheckBox = Create-Control $mainPanel "CheckBox" "Copy unit" 261 40 83 23 "Checked = $true"
+$includeUnitCheckBox = Create-Control $mainPanel "CheckBox" "Copy unit" 261 40 83 23 "Checked = $false"
 $timerLabel = Create-Control $mainPanel "Label" "00:00:00" 259 80 80 23 'Font = New-Object System.Drawing.Font("Consolas",9)'
+
+
 
 $labels = @(
     @{Text="Initial free space:"; Y=80}, @{Text="Current free space:"; Y=120},
@@ -358,14 +362,27 @@ foreach ($label in $labels) {
     [void] (Create-Control $mainPanel "Label" $label.Text 10 $label.Y 119 23)
     $textBoxes += Create-Control $mainPanel "TextBox" "" 129 $label.Y 121 23 "ReadOnly=$true"
 }
-
 $copyButtons = @("Bytes", "MB", "GB")
 foreach ($i in 2..4) {
     foreach ($j in 0..2) {
-        [void] (Create-Control  $mainPanel "Button" "Copy $($copyButtons[$j])" (260 + $j*88) ($labels[$i].Y - 3) 88 26 `
-                                'Tag=@{Index=$i; Unit=$copyButtons[$j]}')
+        $copyButton = Create-Control $mainPanel "Button" "Copy $($copyButtons[$j])" (260 + $j*88) ($labels[$i].Y - 3) 88 26 `
+                                'Tag=@{Index=$i; Unit=$copyButtons[$j]}'
+        $copyButton.Add_Click({
+            $tag = $this.Tag
+            $unit = $tag.Unit
+            $index = $tag.Index
+            $value = switch($index) {
+                2 { switch($unit) { "Bytes" { $script:currentDiffBytes }; "MB" { $script:currentDiffMB }; "GB" { $script:currentDiffGB } } }
+                3 { switch($unit) { "Bytes" { [math]::Round($script:maxDiffAdded * 1MB / 1000) * 1000 }; "MB" { $script:maxDiffAdded }; "GB" { [math]::Round($script:maxDiffAdded / 1024, 2) } } }
+                4 { switch($unit) { "Bytes" { [math]::Round([math]::Abs($script:maxDiffDeleted * 1MB / 1000)) * 1000 }; "MB" { [math]::Abs($script:maxDiffDeleted) }; "GB" { [math]::Round([math]::Abs($script:maxDiffDeleted) / 1024, 2) } } }
+            }
+            $textToCopy = if ($includeUnitCheckBox.Checked) { "$value $unit" } else { "$value" }
+            [System.Windows.Forms.Clipboard]::SetText($textToCopy)
+        })
     }
 }
+
+
 
 $driveComboBox = Create-Control $mainPanel "ComboBox" "" 350 40 175 23 `
     'DropDownStyle=DropDownList' 'FlatStyle=Flat' 'DrawMode=OwnerDrawFixed'
@@ -677,20 +694,6 @@ $genReportButton.Add_Click({
 
 
 
-$form.Controls | Where-Object { $_ -is [System.Windows.Forms.Button] -and $_.Tag } | ForEach-Object {
-    $_.Add_Click({
-        $unit = $this.Tag.Unit
-        $index = $this.Tag.Index
-        $value = switch($index) {
-            2 { switch($unit) { "Bytes" { $script:currentDiffBytes }; "MB" { $script:currentDiffMB }; "GB" { $script:currentDiffGB } } }
-            3 { switch($unit) { "Bytes" { [math]::Round($script:maxDiffAdded * 1MB / 1000) * 1000 }; "MB" { $script:maxDiffAdded }; "GB" { [math]::Round($script:maxDiffAdded / 1024, 2) } } }
-            4 { switch($unit) { "Bytes" { [math]::Round([math]::Abs($script:maxDiffDeleted * 1MB / 1000)) * 1000 }; "MB" { [math]::Abs($script:maxDiffDeleted) }; "GB" { [math]::Round([math]::Abs($script:maxDiffDeleted) / 1024, 2) } } }
-        }
-        $textToCopy = if ($includeUnitCheckBox.Checked) { "$value $unit" } else { "$value" }
-        [System.Windows.Forms.Clipboard]::SetText($textToCopy)
-    })
-}
-
 
 
 $form.Add_FormClosing({
@@ -717,7 +720,6 @@ $form.Add_Shown({
     $launch_progressBar.Value = 100
     $loadingLabel.Text = "Complete"
     $loadingForm.Close()
-    [System.Windows.Forms.Application]::EnableVisualStyles();
     $form.Activate()
 })
 
