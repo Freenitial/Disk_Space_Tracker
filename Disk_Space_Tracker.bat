@@ -65,6 +65,8 @@ $loadingForm.Show(); $loadingForm.Refresh()
 $launch_progressBar.Value = 10
 $loadingLabel.Text = "Loading Global Vars..."
 
+
+
 $script:timer = $null; $script:isStarting = $false; $script:initialFreeSpace = 0
 $script:maxDiffAdded = $script:maxDiffDeleted = $script:currentDiffBytes = $script:currentDiffMB = $script:currentDiffGB = 0
 $script:elapsedTime = [TimeSpan]::Zero; $script:lastTickTime = $null
@@ -83,67 +85,20 @@ $buttonColor = [System.Drawing.Color]::FromArgb(60, 60, 60)
 
 
 
+
+
 #===================== MAIN WINDOW =====================
 
 $launch_progressBar.Value = 15
 $loadingLabel.Text = "Loading Main Window..."
+
+
 
 $form = New-Object System.Windows.Forms.Form
 $form.Text = "Disk Space Tracker"; $form.Size = New-Object System.Drawing.Size(535,275)
 $form.StartPosition = "CenterScreen"; $form.BackColor = $darkBackground; $form.ForeColor = $darkForeground
 $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::None
 
-
-
-
-
-#======================= TITLEBAR =======================
-
-$launch_progressBar.Value = 20
-$loadingLabel.Text = "Loading TitleBar..."
-
-function Add-TitleBarButton($text, $size, $location, $onClick) {
-    $button = New-Object System.Windows.Forms.Button
-    $button.Text = $text; $button.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-    $button.FlatAppearance.BorderSize = 0; $button.BackColor = $accentColor
-    $button.ForeColor = $darkForeground; $button.Font = [System.Drawing.Font]::new("Arial", 10, [System.Drawing.FontStyle]::Bold)
-    $button.Size = [System.Drawing.Size]::new($size[0], $size[1])
-    $button.Location = [System.Drawing.Point]::new($location[0], $location[1])
-    $button.Add_Click($onClick)
-    $titleBar.Controls.Add($button)
-}
-$titleBar = New-Object System.Windows.Forms.Panel
-$titleBar.Dock = [System.Windows.Forms.DockStyle]::Top
-$titleBar.Height = 30; $titleBar.BackColor = $accentColor
-$titleLabel = New-Object System.Windows.Forms.Label
-$titleLabel.Text = "Disk Space Tracker"; $titleLabel.ForeColor = $darkForeground
-$titleLabel.Font = [System.Drawing.Font]::new("Arial", 12, [System.Drawing.FontStyle]::Bold)
-$titleLabel.AutoSize = $true; $titleLabel.Location = [System.Drawing.Point]::new(10, 5)
-$titleBar.Controls.Add($titleLabel)
-Add-TitleBarButton "-" @(30, 30) @(470, 0) { $form.WindowState = [System.Windows.Forms.FormWindowState]::Minimized }
-Add-TitleBarButton "X" @(40, 30) @(500, 0) { $form.Close() }
-$titleBar.Add_MouseDown({ $script:isDragging = $true; $script:offset = $form.PointToScreen($_.Location) - $form.Location })
-$titleBar.Add_MouseMove({ if ($script:isDragging) { $form.Location = $titleBar.PointToScreen($_.Location) - $script:offset } })
-$titleBar.Add_MouseUp({ $script:isDragging = $false })
-$form.Controls.Add($titleBar)
-
-
-
-
-
-#====================== INIT PANELS ======================
-
-$launch_progressBar.Value = 25
-$loadingLabel.Text = "Loading Main Panels..."
-
-$mainPanel = New-Object System.Windows.Forms.Panel
-$mainPanel.Dock = [System.Windows.Forms.DockStyle]::Fill
-$form.Controls.Add($mainPanel)
-
-$AutoPanel = New-Object System.Windows.Forms.Panel
-$AutoPanel.Dock = [System.Windows.Forms.DockStyle]::Fill
-$AutoPanel.Visible = $false
-$form.Controls.Add($AutoPanel)
 
 
 
@@ -155,7 +110,7 @@ $loadingLabel.Text = "Loading Functions..."
 
 
 
-function Create-Control {
+function gen {
     param(
         [Parameter(Mandatory=$true)] $container,
         [Parameter(Mandatory=$true)] [string]$type,
@@ -181,22 +136,41 @@ function Create-Control {
     if ($additionalProps) {
         $additionalProps | ForEach-Object {
             $propName, $propValue = $_ -split '=', 2
-            $propName = $propName.Trim()
-            $propValue = $propValue.Trim()
-            if ($propValue -match '^\[.*\]::') {
-                $control.$propName = Invoke-Expression $propValue
-            } elseif ($propValue -match '^New-Object' -or $propValue -match '^\@\{') {
-                $control.$propName = Invoke-Expression $propValue
-            } else {
-                $control.$propName = switch ($propValue) {
-                    '$true' { $true }; '$false' { $false }
-                    { $_ -match '^\d+$' } { [int]$_ }; default { $_ }
-                }
+            $propName = $propName.Trim(); $propValue = $propValue.Trim()
+            if ($propValue -match '^New-Object' -or $propValue -match '^\@\{') {
+                $control.$propName = Invoke-Expression $propValue }
+            elseif ($propValue -match '^\[.*\]::') {
+                $control.$propName = Invoke-Expression $propValue }
+            elseif ($propName -eq "Font") {
+                $fontParts= $propValue -split ',\s*'
+                $fontName = $fontParts[0].Trim('"')
+                $fontSize = [float]($fontParts[1].Trim())
+                $fontStyle= if ($fontParts.Count -gt 2) { [System.Drawing.FontStyle]($fontParts[2].Trim() -replace '\s', '') } 
+                            else { [System.Drawing.FontStyle]::Regular }
+                $control.Font = New-Object System.Drawing.Font($fontName, $fontSize, $fontStyle) }
+            elseif ($propName -eq "Padding") {
+                $padValues = $propValue -split '\s+'
+                $control.Padding = New-Object System.Windows.Forms.Padding($padValues[0], $padValues[1], $padValues[2], $padValues[3]) }
+            elseif ($propName -in @("ForeColor", "BackColor", "BorderColor", "HoverColor")) {
+                $colorValues = $propValue -split '\s+'
+                $color = if ($colorValues.Count -eq 1) { [System.Drawing.ColorTranslator]::FromHtml($colorValues[0]) }
+                         else { [System.Drawing.Color]::FromArgb($colorValues[0], $colorValues[1], $colorValues[2]) }
+                switch ($propName) {
+                    "ForeColor" { $control.ForeColor = $color }
+                    "BackColor" { $control.BackColor = $color }
+                    "BorderColor" { $control.FlatAppearance.BorderColor = $color }
+                    "HoverColor" { $control.FlatAppearance.MouseOverBackColor = $color } } }
+            elseif ($propName -eq "Dock") {
+                $control.Dock = [System.Windows.Forms.DockStyle]::$propValue }
+            elseif ($propName -eq "BorderStyle") {
+                $control.BorderStyle = $propValue }
+            else { $control.$propName = switch ($propValue) {
+                        '$true' { $true }; '$false' { $false }
+                        { $_ -match '^\d+$' } { [int]$_ }; default { $_ } } 
             }
         }
     }
-    $container.Controls.Add($control)
-    $control
+    $container.Controls.Add($control); $control
 }
 
 
@@ -250,11 +224,11 @@ function Browse-Process {
     $processForm.Text = "Select a Process"
     $processForm.Size = New-Object System.Drawing.Size(550, 550)
     $processForm.StartPosition = "CenterScreen"; $processForm.FormBorderStyle = "FixedDialog"
-    $searchLabel = Create-Control $processForm "Label" "Search :" 10 10 60 30 'Font=New-Object System.Drawing.Font("Segoe UI", 10)'
-    $searchBox = Create-Control $processForm "TextBox" "" 75 10 300 30 'Font=New-Object System.Drawing.Font("Segoe UI", 10)'
-    $refreshButton = Create-Control $processForm "Button" "Refresh" 385 10 100 30 'Font=New-Object System.Drawing.Font("Segoe UI", 10)' 'FlatStyle=Flat'
-    $processList = Create-Control $processForm "ListBox" "" 10 50 520 410 'Font=New-Object System.Drawing.Font("Segoe UI", 10)' 'SelectionMode=One'
-    $okButton = Create-Control $processForm "Button" "OK" 12 460 510 40 'Font=New-Object System.Drawing.Font("Segoe UI", 10)' 'FlatStyle=Flat'
+    $searchLabel = gen $processForm "Label" "Search :" 10 10 60 30 'Font=New-Object System.Drawing.Font("Segoe UI", 10)'
+    $searchBox = gen $processForm "TextBox" "" 75 10 300 30 'Font=New-Object System.Drawing.Font("Segoe UI", 10)'
+    $refreshButton = gen $processForm "Button" "Refresh" 385 10 100 30 'Font=New-Object System.Drawing.Font("Segoe UI", 10)'
+    $processList = gen $processForm "ListBox" "" 10 50 520 410 'Font=New-Object System.Drawing.Font("Segoe UI", 10)' 'SelectionMode=One'
+    $okButton = gen $processForm "Button" "OK" 12 460 510 40 'Font=New-Object System.Drawing.Font("Segoe UI", 10)'
     $populateList = {
         $processList.Items.Clear()
         Get-Process | Group-Object -Property ProcessName | Sort-Object Name | ForEach-Object {
@@ -334,6 +308,68 @@ function Update-Display {
 
 
 
+#======================= TITLEBAR =======================
+
+$launch_progressBar.Value = 20
+$loadingLabel.Text = "Loading TitleBar..."
+
+
+
+function Add-TitleBarButton($text, $size, $location, $onClick) {
+    $button = New-Object System.Windows.Forms.Button
+    $button.Text = $text; $button.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+    $button.FlatAppearance.BorderSize = 0; $button.BackColor = $accentColor
+    $button.ForeColor = $darkForeground; $button.Font = [System.Drawing.Font]::new("Arial", 10, [System.Drawing.FontStyle]::Bold)
+    $button.Size = [System.Drawing.Size]::new($size[0], $size[1])
+    $button.Location = [System.Drawing.Point]::new($location[0], $location[1])
+    $button.Add_Click($onClick)
+    $titleBar.Controls.Add($button)
+}
+$titleBar = New-Object System.Windows.Forms.Panel
+$titleBar.Dock = [System.Windows.Forms.DockStyle]::Top
+$titleBar.Height = 30; $titleBar.BackColor = $accentColor
+$titleLabel = New-Object System.Windows.Forms.Label
+$titleLabel.Text = "Disk Space Tracker"; $titleLabel.ForeColor = $darkForeground
+$titleLabel.Font = [System.Drawing.Font]::new("Arial", 12, [System.Drawing.FontStyle]::Bold)
+$titleLabel.AutoSize = $true; $titleLabel.Location = [System.Drawing.Point]::new(10, 5)
+$titleBar.Controls.Add($titleLabel)
+Add-TitleBarButton "-" @(30, 30) @(470, 0) { $form.WindowState = [System.Windows.Forms.FormWindowState]::Minimized }
+Add-TitleBarButton "X" @(40, 30) @(500, 0) { $form.Close() }
+$titleBar.Add_MouseDown({ $script:isDragging = $true; $script:offset = $form.PointToScreen($_.Location) - $form.Location })
+$titleBar.Add_MouseMove({ if ($script:isDragging) { $form.Location = $titleBar.PointToScreen($_.Location) - $script:offset } })
+$titleBar.Add_MouseUp({ $script:isDragging = $false })
+$form.Controls.Add($titleBar)
+
+
+
+
+
+#====================== INIT PANELS ======================
+
+$launch_progressBar.Value = 25
+$loadingLabel.Text = "Loading Main Panels..."
+
+
+
+$mainpanel = New-Object System.Windows.Forms.Panel
+$mainpanel.Dock = [System.Windows.Forms.DockStyle]::Fill
+$form.Controls.Add($mainpanel)
+
+$AutoPanel = New-Object System.Windows.Forms.Panel
+$AutoPanel.Dock = [System.Windows.Forms.DockStyle]::Fill
+$AutoPanel.Visible = $false
+$form.Controls.Add($AutoPanel)
+
+
+
+
+
+
+
+
+
+
+
 #==================== [INTERFACE] MAIN PANEL ====================
 
 $launch_progressBar.Value = 50
@@ -341,15 +377,14 @@ $loadingLabel.Text = "Loading Main Panel..."
 
 
 
-$StartButton = Create-Control $mainPanel "Button" "Start" 10 40 58 23
-$AutoButton = Create-Control $mainPanel "Button" "Auto" 67 40 58 23
-$genReportButton = Create-Control $mainPanel "Button" "Report" 134 40 58 23
-$resetButton = Create-Control $mainPanel "Button" "Reset" 191 40 58 23
-$readLabel = Create-Control $mainPanel "Label" "R: 0 MBs" 259 110 83 14 'Font=New-Object System.Drawing.Font("Consolas",7)'
-$writeLabel = Create-Control $mainPanel "Label" "W: 0 MBs" 259 126 83 14 'Font=New-Object System.Drawing.Font("Consolas",7)'
-$includeUnitCheckBox = Create-Control $mainPanel "CheckBox" "Copy unit" 261 40 83 23 "Checked = $null"
-$timerLabel = Create-Control $mainPanel "Label" "00:00:00" 259 80 80 23 'Font = New-Object System.Drawing.Font("Consolas",9)'
-
+$StartButton = gen $mainpanel "Button" "Start" 10 40 58 23
+$AutoButton = gen $mainpanel "Button" "Auto" 67 40 58 23
+$genReportButton = gen $mainpanel "Button" "Report" 134 40 58 23
+$resetButton = gen $mainpanel "Button" "Reset" 191 40 58 23
+$readLabel = gen $mainpanel "Label" "R: 0 MBs" 259 110 83 14 'Font=Consolas,7'
+$writeLabel = gen $mainpanel "Label" "W: 0 MBs" 259 126 83 14 'Font=Consolas,7'
+$includeUnitCheckBox = gen $mainpanel "CheckBox" "Copy unit" 261 40 83 23 "Checked=$null"
+$timerLabel = gen $mainpanel "Label" "00:00:00" 259 80 80 23 'Font=Consolas,9'
 
 
 $labels = @(
@@ -359,18 +394,15 @@ $labels = @(
 )
 $textBoxes = @()
 foreach ($label in $labels) {
-    [void] (Create-Control $mainPanel "Label" $label.Text 10 $label.Y 119 23)
-    $textBoxes += Create-Control $mainPanel "TextBox" "" 129 $label.Y 121 23 "ReadOnly=$true"
+    [void] (gen $mainpanel "Label" $label.Text 10 $label.Y 119 23)
+    $textBoxes += gen $mainpanel "TextBox" "" 129 $label.Y 121 23 "ReadOnly=$true"
 }
 $copyButtons = @("Bytes", "MB", "GB")
 foreach ($i in 2..4) {
     foreach ($j in 0..2) {
-        $copyButton = Create-Control $mainPanel "Button" "Copy $($copyButtons[$j])" (260 + $j*88) ($labels[$i].Y - 3) 88 26 `
-                                'Tag=@{Index=$i; Unit=$copyButtons[$j]}'
+        $copyButton = gen $mainpanel "Button" "Copy $($copyButtons[$j])" (260 + $j*88) ($labels[$i].Y - 3) 88 26 'Tag=@{Index=$i; Unit=$copyButtons[$j]}'
         $copyButton.Add_Click({
-            $tag = $this.Tag
-            $unit = $tag.Unit
-            $index = $tag.Index
+            $tag = $this.Tag; $unit = $tag.Unit; $index = $tag.Index
             $value = switch($index) {
                 2 { switch($unit) { "Bytes" { $script:currentDiffBytes }; "MB" { $script:currentDiffMB }; "GB" { $script:currentDiffGB } } }
                 3 { switch($unit) { "Bytes" { [math]::Round($script:maxDiffAdded * 1MB / 1000) * 1000 }; "MB" { $script:maxDiffAdded }; "GB" { [math]::Round($script:maxDiffAdded / 1024, 2) } } }
@@ -383,27 +415,20 @@ foreach ($i in 2..4) {
 }
 
 
-
-$driveComboBox = Create-Control $mainPanel "ComboBox" "" 350 40 175 23 `
-    'DropDownStyle=DropDownList' 'FlatStyle=Flat' 'DrawMode=OwnerDrawFixed'
+$driveComboBox = gen $mainpanel "ComboBox" "" 350 40 175 23 'DropDownStyle=DropDownList' 'FlatStyle=Flat' 'DrawMode=OwnerDrawFixed'
 $driveComboBox.Add_DrawItem({
     param($unused, $e); $e.DrawBackground()
-    if ($e.Index -ge 0) {
-        $brush = New-Object System.Drawing.SolidBrush($darkForeground)
-        $e.Graphics.DrawString($driveComboBox.Items[$e.Index], $e.Font, $brush, $e.Bounds.Left, $e.Bounds.Top)
-    }
+    if ($e.Index -ge 0) 
+          { $brush = New-Object System.Drawing.SolidBrush($darkForeground)
+            $e.Graphics.DrawString($driveComboBox.Items[$e.Index], $e.Font, $brush, $e.Bounds.Left, $e.Bounds.Top) }
     $e.DrawFocusRectangle()
 })
 $driveComboBox.Items.AddRange((Get-AvailableDrives))
 $cDrive = $driveComboBox.Items | Where-Object { $_.StartsWith("C:") } | Select-Object -First 1
-if ($cDrive) {
-    $driveComboBox.SelectedItem = $cDrive
-} else {
-    $driveComboBox.SelectedIndex = 0  # Sélectionne le premier élément si le lecteur C: n'est pas trouvé
-}
-$driveComboBox.Add_SelectedIndexChanged({
-    $script:selectedDrive = $this.SelectedItem.Substring(0, 2)  # Prend seulement la lettre du lecteur et le ":"
-})
+if ($cDrive) 
+        { $driveComboBox.SelectedItem = $cDrive } 
+else    { $driveComboBox.SelectedIndex = 0  } # Sélectionne le premier élément si le lecteur C: n'est pas trouvé
+$driveComboBox.Add_SelectedIndexChanged({ $script:selectedDrive = $this.SelectedItem.Substring(0, 2)  }) # Prend seulement la lettre du lecteur et le ":"
 
 
 
@@ -414,55 +439,35 @@ $driveComboBox.Add_SelectedIndexChanged({
 $launch_progressBar.Value = 60
 $loadingLabel.Text = "Loading Auto Panel..."
 
+
+
 function Show-AutoInterface {
-    $mainPanel.Visible = $false
+    $mainpanel.Visible = $false
     $AutoPanel.Visible = $true
 
     # Si le panel Auto est vide, ajoutez les contrôles
     if ($AutoPanel.Controls.Count -eq 0) {
-        $backButton = Create-Control $AutoPanel "Button" ($([char]0x2B9C) +"    Back") 10 40 90 25
+        $backButton = gen $AutoPanel "Button" ($([char]0x2B9C) +"    Back") 10 40 90 25
         $backButton.Add_Click({
             $AutoPanel.Visible = $false
-            $mainPanel.Visible = $true
+            $mainpanel.Visible = $true
         })
 
         # Ajout des onglets
-        $tabControl = Create-Control $AutoPanel "TabControl" "" 9 70 517 196
+        $tabControl = gen $AutoPanel "TabControl" "" 9 70 517 196
 
-        $yPos = 15
-        $Trigger_groupBox = New-Object System.Windows.Forms.GroupBox
-        $Trigger_groupBox.Size = New-Object System.Drawing.Size(90, 101)
-        $Trigger_groupBox.Location = New-Object System.Drawing.Point(10, 57)
-        $Trigger_groupBox_Label = Create-Control $AutoPanel "Label" "Trigger :" 5 $yPos 80 17
-        $Trigger_groupBox_Label.Font = [System.Drawing.Font]::new("Arial", 8, [System.Drawing.FontStyle]::Bold)
-        $radioButton_Freeze = Create-Control $AutoPanel "RadioButton" "Freeze" 5 ($yPos + 21) 80 20
-        $radioButton_Start = Create-Control $AutoPanel "RadioButton" "Start" 5 ($yPos + 39) 80 20
-        $radioButton_Re_Start = Create-Control $AutoPanel "RadioButton" "Re-Start" 5 ($yPos + 58) 80 20
-        $Trigger_groupBox.Controls.AddRange(@($Trigger_groupBox_Label, $radioButton_Start, $radioButton_Freeze, $radioButton_Re_Start))
-        $AutoPanel.Controls.Add($Trigger_groupBox)
+        $yPos = 10
 
-        $All_or_Any_groupBox = New-Object System.Windows.Forms.GroupBox
-        $All_or_Any_groupBox.Size = New-Object System.Drawing.Size(90, 85)
-        $All_or_Any_groupBox.Location = New-Object System.Drawing.Point(10, 150)
-        $All_or_Any_groupBox_Label = Create-Control $AutoPanel "Label" "Logic :" 5 $yPos 80 19
-        $All_or_Any_groupBox_Label.Font = [System.Drawing.Font]::new("Arial", 8, [System.Drawing.FontStyle]::Bold)
-        $radioButton_All_Selected = Create-Control $AutoPanel "RadioButton" "All (and)" 5 ($yPos + 21) 80 20
-        $radioButton_Any_Selected = Create-Control $AutoPanel "RadioButton" "Any (or)" 5 ($yPos + 40) 70 20
-        $All_or_Any_groupBox.Controls.AddRange(@($All_or_Any_groupBox_Label, $radioButton_All_Selected, $radioButton_Any_Selected))
-        $AutoPanel.Controls.Add($All_or_Any_groupBox)
 
-        $EnableAuto_Checkbox = Create-Control $AutoPanel "Button" "Enable" 10 234 90 30
-        $EnableAuto_Checkbox.Font = [System.Drawing.Font]::new("Arial", 9, [System.Drawing.FontStyle]::Bold)
-        $Report_Checkbox = Create-Control $AutoPanel "CheckBox" "Gen Report" 10 208 90 20
-        $Report_Checkbox.Add_CheckedChanged({ Update-Conditions })
 
-        $waitLabel = Create-Control $AutoPanel "Label" "NOT IMPLEMENTED" 359 40 180 20
-        $waitLabel.Font = [System.Drawing.Font]::new("Arial", 10, [System.Drawing.FontStyle]::Bold)
-        $waitLabel.ForeColor = [System.Drawing.ColorTranslator]::FromHtml("#ffffff")
+        $waitLabel = gen $AutoPanel "Label" "NOT IMPLEMENTED" 359 40 180 20 'Font=Arial,10,Bold' "ForeColor=red"
         $checkBoxes = @("File exist", "File used", "Process exist", "Reg key exist")
 
         $tabPages = @("Freeze", "Start", "Reset")
         foreach ($tabName in $tabPages) {
+
+
+
             $tabPage = New-Object System.Windows.Forms.TabPage
             $tabPage.Text = $tabName
             $tabPage.BackColor = $darkBackground
@@ -473,61 +478,57 @@ function Show-AutoInterface {
             $tabPanel.Dock = [System.Windows.Forms.DockStyle]::Fill
             $tabPage.Controls.Add($tabPanel)
 
-            $xPos = 5; $yPos = 10  # Réinitialiser les positions pour chaque onglet
+            $xPos = 105; $yPos = 0
+
+            $All_or_Any_groupBox = gen $tabPanel "GroupBox" "" 0 10 90 85
+            $All_or_Any_groupBox_Label = gen $All_or_Any_groupBox "Label" "Logic :" 5 $yPos 80 19 'Font=Arial,8,Bold'
+            $radioButton_All_Selected = gen $All_or_Any_groupBox "RadioButton" "All (and)" 5 ($yPos + 21) 80 20
+            $radioButton_Any_Selected = gen $All_or_Any_groupBox "RadioButton" "Any (or)" 5 ($yPos + 40) 80 20
+
+            $EnableAuto_Checkbox = gen $tabPanel "Button" "Enable" 0 137 90 30 'Font=Arial,9,Bold'
+            $Report_Checkbox = gen $tabPanel "CheckBox" "Gen Report" 10 208 90 20
+            $Report_Checkbox.Add_CheckedChanged({ Update-Conditions })
 
             # Contenu de l'onglet
-            $ExeclineLabel = Create-Control $tabPanel "CheckBox" "Execute, then wait closing" $xPos $yPos 185 20
-            $ExecLinePath = Create-Control $tabPanel "TextBox" "" ($xPos + 190) $yPos 156 20
-            $ExecbrowseButton = Create-Control $tabPanel "Button" "Browse" ($xPos + 345) $yPos 59 20
+            $ExeclineLabel = gen $tabPanel "CheckBox" "Execute, then wait closing" $xPos $yPos 185 20
+            $ExecLinePath = gen $tabPanel "TextBox" "" ($xPos + 190) $yPos 156 20
+            $ExecbrowseButton = gen $tabPanel "Button" "Browse" ($xPos + 345) $yPos 59 22
             $ExecbrowseButton.Add_Click({ Browse-File -associatedTextBox $ExecLinePath })
-            $tabPanel.Controls.AddRange(@($ExeclineLabel, $ExecLinePath, $ExecbrowseButton))
             $yPos += 20
 
             foreach ($text in $checkBoxes) {
-                $checkBox = Create-Control $tabPanel "CheckBox" $text $xPos $yPos 108 20
+                $checkBox = gen $tabPanel "CheckBox" $text $xPos $yPos 108 20
                 $checkBox.Add_CheckedChanged({ Update-Conditions })
-                $groupBox_YesNo = New-Object System.Windows.Forms.GroupBox
-                $groupBox_YesNo.Size = New-Object System.Drawing.Size(80, 22)
-                $groupBox_YesNo.Location = New-Object System.Drawing.Point(($xPos + 108), ($yPos-5))
-                $radioButton_Yes = Create-Control $tabPanel "RadioButton" $([char]0x2713) 0 4 40 20
-                $radioButton_No = Create-Control $tabPanel "RadioButton" $([char]0x2717) 40 4 40 20
+                $groupBox_YesNo = gen $tabPanel "GroupBox" "" ($xPos + 108) ($yPos-5) 80 22
+                $radioButton_Yes = gen $tabPanel "RadioButton" $([char]0x2713) 0 4 40 20
+                $radioButton_No = gen $tabPanel "RadioButton" $([char]0x2717) 40 4 40 20
                 $groupBox_YesNo.Controls.AddRange(@($radioButton_Yes, $radioButton_No))
-                $textBox = Create-Control $tabPanel "TextBox" "" ($xPos + 190) ($yPos - 1) 156 20
+                $textBox = gen $tabPanel "TextBox" "" ($xPos + 190) ($yPos - 1) 156 20
                 $textBox.Name = "TextBox_$($checkBoxes.IndexOf($text))_$tabName"
-                $browseButton = Create-Control $tabPanel "Button" "Browse" ($xPos + 345) ($yPos - 1) 59 20
+                $browseButton = gen $tabPanel "Button" "Browse" ($xPos + 345) ($yPos - 1) 59 22
                 $scriptBlock = {
                     param($associatedTextBox, $labelText)
-                    if ($labelText.ToLower().Contains("process")) {
-                        Browse-Process -associatedTextBox $associatedTextBox
-                    } else {
-                        Browse-File -associatedTextBox $associatedTextBox
-                    }
+                    if ($labelText.ToLower().Contains("process")) 
+                            { Browse-Process -associatedTextBox $associatedTextBox }
+                    else    { Browse-File -associatedTextBox $associatedTextBox }
                 }.GetNewClosure()
                 $browseButton.Add_Click($ExecutionContext.InvokeCommand.NewScriptBlock("& {$scriptBlock} `$this.Parent.Controls['$($textBox.Name)'] `'$($checkBox.Text)'"))
-                $tabPanel.Controls.AddRange(@($checkBox, $groupBox_YesNo, $textBox, $browseButton))
                 $yPos += 20
             }
 
             # Analyze Text File section
-            $CheckboxlineLabel = Create-Control $tabPanel "CheckBox" "Analyze text file" $xPos $yPos 121 20
-            $CheckboxlineLabel.ForeColor = [System.Drawing.ColorTranslator]::FromHtml("#ebdebf")
-            $textBox_Line_Browse = Create-Control $tabPanel "TextBox" "" ($xPos + 190) ($yPos - 1) 156 20
-            $textBox_Line_Browse.Name = "TextBox_Line_Browse"
-            $browseButton_Line = Create-Control $tabPanel "Button" "Browse" ($xPos + 345) ($yPos - 1) 59 20
+            $CheckboxlineLabel = gen $tabPanel "CheckBox" "Analyze text file" $xPos $yPos 121 20 "ForeColor=#ebdebf"
+            $textBox_Line_Browse = gen $tabPanel "TextBox" "" ($xPos + 190) ($yPos - 1) 156 20 "Name=TextBox_Line_Browse"
+            $browseButton_Line = gen $tabPanel "Button" "Browse" ($xPos + 345) ($yPos - 1) 59 22
             $browseButton_Line.Add_Click({ Browse-File -associatedTextBox $textBox_Line_Browse })
-            $tabPanel.Controls.AddRange(@($CheckboxlineLabel, $textBox_Line_Browse, $browseButton_Line))
-            $yPos += 30; $xPos += 17
+            $yPos += 20; $xPos += 17
 
-            $ContentlineLabel = Create-Control $tabPanel "Label" "Content to search :" ($xPos) $yPos 122 20
-            $ContentlineLabel.ForeColor = [System.Drawing.ColorTranslator]::FromHtml("#ebdebf")
-            $textBox_Line_Content = Create-Control $tabPanel "TextBox" "" ($xPos + 173) ($yPos - 3) 214 20
-            $tabPanel.Controls.AddRange(@($ContentlineLabel, $textBox_Line_Content))
-            $yPos += 30
+            $ContentlineLabel = gen $tabPanel "Label" "Content to search :" ($xPos) $yPos 122 17 "ForeColor=#ebdebf"
+            $textBox_Line_Content = gen $tabPanel "TextBox" "" ($xPos + 173) ($yPos - 3) 214 20
+            $yPos += 19
 
-            $line_number_Label = Create-Control $tabPanel "Label" "At line n$([char]176)" $xPos ($yPos + 2) 60 20
-            $line_number_Label.ForeColor = [System.Drawing.ColorTranslator]::FromHtml("#ebdebf")
-            $textBox_Line = Create-Control $tabPanel "TextBox" "" ($xPos + 60) ($yPos - 1) 30 20
-            $tabPanel.Controls.AddRange(@($line_number_Label, $textBox_Line))
+            $line_number_Label = gen $tabPanel "Label" "At line n$([char]176)" $xPos ($yPos + 2) 60 20 "ForeColor=#ebdebf"
+            $textBox_Line = gen $tabPanel "TextBox" "" ($xPos + 60) ($yPos - 1) 30 20
             $xPos += 25
 
             $radioButtons = @(
@@ -539,7 +540,7 @@ function Show-AutoInterface {
                 @("EndsWith", "End", ($xPos + 317), 60)
             )
             foreach ($rb in $radioButtons) {
-                ${"radioButton_$($rb[0])"} = Create-Control $tabPanel "RadioButton" $rb[1] ([int]$rb[2]) $yPos ([int]$rb[3]) 20
+                ${"radioButton_$($rb[0])"} = gen $tabPanel "RadioButton" $rb[1] ([int]$rb[2]) $yPos ([int]$rb[3]) 20
                 $tabPanel.Controls.Add(${"radioButton_$($rb[0])"})
             }
 
@@ -561,16 +562,11 @@ function Update-Conditions {
 
 # Ajouter une fonction pour vérifier périodiquement les conditions
 function Start-ConditionCheck {
-    while (-not $script:End_Trigger) {
-        Update-Conditions
-        Start-Sleep -Seconds 1
-    }
+    while (-not $script:End_Trigger) { Update-Conditions; Start-Sleep -Seconds 1 }
     Write-Host "All conditions met!"
 }
 
-$AutoButton.Add_Click({
-    Show-AutoInterface
-})
+$AutoButton.Add_Click({ Show-AutoInterface })
 
 
 
@@ -582,15 +578,16 @@ $launch_progressBar.Value = 70
 $loadingLabel.Text = "Loading Unit Converter..."
 
 
+
 $units = @("B", "KB", "MB", "GB")
-$CreatePanel = { param($x, $y, $w, $h); Create-Control $mainPanel "Panel" "" $x $y $w $h 'BackColor=[System.Drawing.Color]::Black' }
-$CreateTextBox = { param($x, $y); Create-Control $mainPanel "TextBox" "" $x $y 100 23 }
+$CreatePanel = { param($x, $y, $w, $h); gen $mainpanel "Panel" "" $x $y $w $h "backcolor=Black" }
+$CreateTextBox = { param($x, $y); gen $mainpanel "TextBox" "" $x $y 100 23 }
 $CreateComboBox = { 
     param($x, $y) 
-    $cb = Create-Control $mainPanel "ComboBox" "" $x $y 47 23 'DropDownStyle=[System.Windows.Forms.ComboBoxStyle]::DropDownList'
+    $cb = gen $mainpanel "ComboBox" "" $x $y 47 23 'DropDownStyle=[System.Windows.Forms.ComboBoxStyle]::DropDownList'
     $cb.Items.AddRange($units);  $cb
 }
-$conversionLabel = Create-Control $mainPanel "Label" "Unit Conversion" 355 80 100 10 'TextAlign=[System.Drawing.ContentAlignment]::MiddleCenter'
+$conversionLabel = gen $mainpanel "Label" "Unit Conversion" 355 80 100 10 'TextAlign=[System.Drawing.ContentAlignment]::MiddleCenter'
 $conversionTextBox1 = &$CreateTextBox 360 97; $conversionTextBox2 = &$CreateTextBox 360 117
 $conversionComboBox1 = &$CreateComboBox 465 96; $conversionComboBox2 = &$CreateComboBox 465 116
 $conversionComboBox1.SelectedIndex = 2; $conversionComboBox2.SelectedIndex = 3 # MB default, GB default
@@ -613,6 +610,7 @@ function Update-Conversion {
         $tgtTextBox.Clear()
     }
 }
+
 $conversionTextBox1.Add_GotFocus({ $script:activeTextBox = $conversionTextBox1 })
 $conversionTextBox2.Add_GotFocus({ $script:activeTextBox = $conversionTextBox2 })
 $HandleTextChange = {
@@ -691,8 +689,6 @@ $genReportButton.Add_Click({
     # Logique pour générer le rapport (à implémenter plus tard)
     [System.Windows.Forms.MessageBox]::Show("Report generation not implemented yet.", "Info", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
 })
-
-
 
 
 
