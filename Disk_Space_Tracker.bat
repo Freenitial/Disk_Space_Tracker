@@ -561,9 +561,26 @@ function Show-AutoInterface {
                         })
                         $groupBox_YesNo = gen $tabPanel "GroupBox" "" ($xPos + 108) ($yPos-5) 80 22
                         $radioButton_Yes = gen $groupBox_YesNo "RadioButton" $([char]0x2713) 0 4 40 20
-                        $radioButton_Yes.Checked = $true
                         $radioButton_No = gen $groupBox_YesNo "RadioButton" $([char]0x2717) 40 4 40 20
+                        $radioButton_Yes.Checked = $true
                         $groupBox_YesNo.Controls.AddRange(@($radioButton_Yes, $radioButton_No))
+
+                        # Ajout des Tags et des gestionnaires d'événements
+                        $radioButton_Yes.Tag = @{TabName = $tabName; ConditionType = $text; Value = "Yes"}
+                        $radioButton_No.Tag = @{TabName = $tabName; ConditionType = $text; Value = "No"}
+
+                        $radioHandler = {
+                            param($sender, $e)
+                            $tabName = $sender.Tag.TabName
+                            $conditionType = $sender.Tag.ConditionType
+                            $value = $sender.Tag.Value
+                            Write-Host "RadioButton $value CheckedChanged déclenché pour $conditionType dans $tabName"
+                            Update-RadioCondition -TabName $tabName -ConditionType $conditionType -Value $value
+                        }
+
+                        $radioButton_Yes.Add_CheckedChanged($radioHandler)
+                        $radioButton_No.Add_CheckedChanged($radioHandler)
+                        
                         if ($text.ToLower() -like "*reg*") { $textBoxWidth = 214 } 
                         else { $textBoxWidth = 156 }
                         $textBox = gen $tabPanel "TextBox" "" ($xPos + 190) ($yPos - 1) $textBoxWidth 20
@@ -615,6 +632,39 @@ function Show-AutoInterface {
         throw  # Relance l'exception pour qu'elle soit capturée par le bloc try-catch parent
     }
 }
+
+
+function Update-RadioCondition {
+    param(
+        [string]$TabName,
+        [string]$ConditionType,
+        [string]$Value
+    )
+    
+    Write-Host "Mise à jour de la condition radio pour l'onglet: $TabName, Condition: $ConditionType, Valeur: $Value"
+    
+    if (-not $script:conditionStates.ContainsKey($TabName)) {
+        $script:conditionStates[$TabName] = @{
+            Conditions = @{}
+        }
+    }
+    
+    $script:conditionStates[$TabName].Conditions["${ConditionType}_YesNo"] = $Value
+    
+    Write-Host "État mis à jour pour ${ConditionType}_YesNo dans $TabName : $Value"
+    
+    # Appeler Update-Conditions pour synchroniser l'état
+    Update-Conditions -TabName $TabName -ConditionType $ConditionType
+    
+    if ($null -ne $script:updateLogsFunction) {
+        try {
+            & $script:updateLogsFunction "Check" "Condition ${ConditionType}_YesNo mise à jour pour $TabName : $Value"
+        } catch {
+            Write-Host "Erreur lors de la mise à jour des logs : $_"
+        }
+    }
+}
+
 
 function Update-ActiveChecks {
     param($tabName)
@@ -831,20 +881,12 @@ function Update-Conditions {
     
     $script:conditionStates[$TabName].Conditions[$ConditionType] = $checkbox.Checked
     
-    # Vérifier l'état des boutons radio
-    $groupBox_YesNo = $panel.Controls | Where-Object { $_ -is [System.Windows.Forms.GroupBox] -and $_.Location.X -eq ($checkbox.Location.X + 108) }
-    if ($groupBox_YesNo) {
-        $radioButton_Yes = $groupBox_YesNo.Controls | Where-Object { $_ -is [System.Windows.Forms.RadioButton] -and $_.Text -eq [char]0x2713 }
-        $radioButton_No = $groupBox_YesNo.Controls | Where-Object { $_ -is [System.Windows.Forms.RadioButton] -and $_.Text -eq [char]0x2717 }
-        if ($radioButton_Yes -and $radioButton_No) {
-            $yesNoState = if ($radioButton_Yes.Checked) { "Yes" } else { "No" }
-            $script:conditionStates[$TabName].Conditions["${ConditionType}_YesNo"] = $yesNoState
-            Write-Host "État du bouton radio Yes/No pour $ConditionType : $yesNoState"
-        } else {
-            Write-Host "Boutons radio Yes/No non trouvés pour $ConditionType"
-        }
+    # Lire l'état du bouton radio à partir de $script:conditionStates
+    $yesNoState = $script:conditionStates[$TabName].Conditions["${ConditionType}_YesNo"]
+    if ($yesNoState) {
+        Write-Host "État du bouton radio Yes/No pour $ConditionType : $yesNoState"
     } else {
-        Write-Host "GroupBox Yes/No non trouvé pour $ConditionType"
+        Write-Host "État du bouton radio Yes/No pour $ConditionType non trouvé"
     }
     
     $pendingCount = ($script:conditionStates.Values.Conditions.Values | Where-Object { $_ -eq $true }).Count
@@ -853,6 +895,8 @@ function Update-Conditions {
     }
     
     Write-Host "État mis à jour pour $ConditionType dans $TabName : $($checkbox.Checked)"
+    Write-Host "État complet des conditions pour $TabName :"
+    $script:conditionStates[$TabName].Conditions | Format-Table -AutoSize | Out-String | Write-Host
     
     if ($null -ne $script:updateLogsFunction) {
         try {
