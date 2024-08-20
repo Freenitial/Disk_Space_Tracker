@@ -80,7 +80,8 @@ $script:End_Trigger = $false
 $script:conditionStates = @{}
 $script:activeChecks = @{}
 $script:pendingCount = $null
-$script:tabControl=$null
+$script:tabControl = $null
+$script:logListView = $null
 $darkBackground = [System.Drawing.Color]::FromArgb(30, 30, 30)
 $darkForeground = [System.Drawing.Color]::FromArgb(240, 240, 240)
 $accentColor = [System.Drawing.Color]::FromArgb(0, 120, 215)
@@ -500,19 +501,25 @@ function Show-AutoInterface {
                 }
                 elseif ($tabName -eq "Logs") {
                     $logLabel = gen $tabPanel "Label" "Automation Logs" 10 10 200 20 'Font=Arial,12,Bold'
-                    $logListView = gen $tabPanel "ListView" "" 10 40 490 120 'View=Details' 'FullRowSelect=true' 'GridLines=true'
-                    $logListView.Columns.Add("Time", 100)
-                    $logListView.Columns.Add("Mode", 65)
-                    $logListView.Columns.Add("Event", 303)
+                    $script:logListView = gen $tabPanel "ListView" "" 10 40 490 120 'View=Details' 'FullRowSelect=true' 'GridLines=true'
+                    $script:logListView.Columns.Add("Time", 100)
+                    $script:logListView.Columns.Add("Mode", 65)
+                    $script:logListView.Columns.Add("Event", 303)
                     $pendingLabel = gen $tabPanel "Label" "Pending Conditions:" 10 170 150 20 'Font=Arial,10'
                     $script:pendingCount = gen $tabPanel "Label" "0" 160 170 30 20 'Font=Arial,10,Bold' "ForeColor=#FFD700"
                     $script:updateLogsFunction = {
                         param($mode, $event)
+                        if ($null -eq $script:logListView) {
+                            Write-Host "script:logListView n'est pas défini"
+                            return
+                        }
                         $item = New-Object System.Windows.Forms.ListViewItem((Get-Date -Format "HH:mm:ss"))
                         $item.SubItems.Add($mode)
                         $item.SubItems.Add($event)
-                        $logListView.Items.Insert(0, $item)
-                        if ($logListView.Items.Count > 100) { $logListView.Items.RemoveAt(100) }
+                        $script:logListView.Invoke([Action]{
+                            $script:logListView.Items.Insert(0, $item)
+                            if ($script:logListView.Items.Count > 100) { $script:logListView.Items.RemoveAt(100) }
+                        })
                     }
                 }
                 else {
@@ -553,9 +560,9 @@ function Show-AutoInterface {
                             Update-Conditions -TabName $tabName -ConditionType $conditionType
                         })
                         $groupBox_YesNo = gen $tabPanel "GroupBox" "" ($xPos + 108) ($yPos-5) 80 22
-                        $radioButton_Yes = gen $tabPanel "RadioButton" $([char]0x2713) 0 4 40 20
+                        $radioButton_Yes = gen $groupBox_YesNo "RadioButton" $([char]0x2713) 0 4 40 20
                         $radioButton_Yes.Checked = $true
-                        $radioButton_No = gen $tabPanel "RadioButton" $([char]0x2717) 40 4 40 20
+                        $radioButton_No = gen $groupBox_YesNo "RadioButton" $([char]0x2717) 40 4 40 20
                         $groupBox_YesNo.Controls.AddRange(@($radioButton_Yes, $radioButton_No))
                         if ($text.ToLower() -like "*reg*") { $textBoxWidth = 214 } 
                         else { $textBoxWidth = 156 }
@@ -824,6 +831,22 @@ function Update-Conditions {
     
     $script:conditionStates[$TabName].Conditions[$ConditionType] = $checkbox.Checked
     
+    # Vérifier l'état des boutons radio
+    $groupBox_YesNo = $panel.Controls | Where-Object { $_ -is [System.Windows.Forms.GroupBox] -and $_.Location.X -eq ($checkbox.Location.X + 108) }
+    if ($groupBox_YesNo) {
+        $radioButton_Yes = $groupBox_YesNo.Controls | Where-Object { $_ -is [System.Windows.Forms.RadioButton] -and $_.Text -eq [char]0x2713 }
+        $radioButton_No = $groupBox_YesNo.Controls | Where-Object { $_ -is [System.Windows.Forms.RadioButton] -and $_.Text -eq [char]0x2717 }
+        if ($radioButton_Yes -and $radioButton_No) {
+            $yesNoState = if ($radioButton_Yes.Checked) { "Yes" } else { "No" }
+            $script:conditionStates[$TabName].Conditions["${ConditionType}_YesNo"] = $yesNoState
+            Write-Host "État du bouton radio Yes/No pour $ConditionType : $yesNoState"
+        } else {
+            Write-Host "Boutons radio Yes/No non trouvés pour $ConditionType"
+        }
+    } else {
+        Write-Host "GroupBox Yes/No non trouvé pour $ConditionType"
+    }
+    
     $pendingCount = ($script:conditionStates.Values.Conditions.Values | Where-Object { $_ -eq $true }).Count
     if ($null -ne $script:pendingCount) {
         $script:pendingCount.Text = $pendingCount.ToString()
@@ -832,9 +855,12 @@ function Update-Conditions {
     Write-Host "État mis à jour pour $ConditionType dans $TabName : $($checkbox.Checked)"
     
     if ($null -ne $script:updateLogsFunction) {
-        & $script:updateLogsFunction "Check" "Condition $ConditionType mise à jour pour $TabName"
+        try {
+            & $script:updateLogsFunction "Check" "Condition $ConditionType mise à jour pour $TabName"
+        } catch {
+            Write-Host "Erreur lors de la mise à jour des logs : $_"
+        }
     }
-    Write-Host "après condition type"
 }
 
 function Start-ConditionCheck {
