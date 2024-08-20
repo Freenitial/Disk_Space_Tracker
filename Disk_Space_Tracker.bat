@@ -483,6 +483,7 @@ function Show-AutoInterface {
             foreach ($tabName in $tabPages) {
                 $tabPage = New-Object System.Windows.Forms.TabPage
                 $tabPage.Text = $tabName
+                Write-Host "Création de l'onglet : $tabName"
                 $tabPage.BackColor = $darkBackground
                 $tabPage.ForeColor = $darkForeground
                 $tabPanel = New-Object System.Windows.Forms.Panel
@@ -542,7 +543,15 @@ function Show-AutoInterface {
                     $yPos += 19
                     foreach ($text in $used_exist_checkBoxes) {
                         $checkBox = gen $tabPanel "CheckBox" $text $xPos $yPos 108 20
-                        $checkBox.Add_CheckedChanged({ Update-Conditions })
+                        $checkBox.Tag = @{TabName = $tabName; ConditionType = $text}
+                        Write-Host "Création du checkbox '$text' pour l'onglet '$tabName' avec Tag: $($checkBox.Tag | ConvertTo-Json -Compress)"
+                        $checkBox.Add_CheckedChanged({
+                            param($sender, $e)
+                            $tabName = $sender.Tag.TabName
+                            $conditionType = $sender.Tag.ConditionType
+                            Write-Host "CheckedChanged déclenché pour $conditionType dans $tabName"
+                            Update-Conditions -TabName $tabName -ConditionType $conditionType
+                        })
                         $groupBox_YesNo = gen $tabPanel "GroupBox" "" ($xPos + 108) ($yPos-5) 80 22
                         $radioButton_Yes = gen $tabPanel "RadioButton" $([char]0x2713) 0 4 40 20
                         $radioButton_Yes.Checked = $true
@@ -628,18 +637,32 @@ function Initialize-ConditionCheck {
     param($tabName)
 
     $tabPage = $script:tabControl.TabPages | Where-Object { $_.Text -eq $tabName }
+    if ($null -eq $tabPage) {
+        Write-Host "Onglet $tabName non trouvé"
+        return
+    }
+
+    $panel = $tabPage.Controls | Where-Object { $_ -is [System.Windows.Forms.Panel] }
+    if ($null -eq $panel) {
+        Write-Host "Panel non trouvé dans l'onglet $tabName"
+        return
+    }
+
     $script:conditionStates[$tabName] = @{
-        AllConditions = $tabPage.Controls['All_or_Any_groupBox'].Controls['radioButton_All_Selected'].Checked
+        AllConditions = $panel.Controls['All_or_Any_groupBox'].Controls['radioButton_All_Selected'].Checked
         Conditions = @{}
     }
     
-    $conditions = @("File exist", "File used", "Process exist", "Reg key exist", "Wait time", "Execute then wait closing")
+    $conditions = @("File exist", "File used", "Process exist", "Reg key exist", "Wait time", "Execute, then wait closing")
     foreach ($condition in $conditions) {
-        $checkbox = $tabPage.Controls | Where-Object { $_ -is [System.Windows.Forms.CheckBox] -and $_.Text -eq $condition }
-        if ($checkbox -and $checkbox.Checked) {
-            $script:conditionStates[$tabName].Conditions[$condition] = $false
+        $checkbox = $panel.Controls | Where-Object { $_ -is [System.Windows.Forms.CheckBox] -and $_.Text -eq $condition }
+        if ($checkbox) {
+            $script:conditionStates[$tabName].Conditions[$condition] = $checkbox.Checked
+            Write-Host "Condition '$condition' initialisée pour $tabName : $($checkbox.Checked)"
         }
     }
+
+    Write-Host "Conditions initialisées pour $tabName"
 }
 
 function Check-FileExist {
@@ -686,21 +709,47 @@ function Check-ExecuteAndWait {
 }
 
 function Check-Conditions {
+    Write-Host "Début de Check-Conditions"
     $completedTabs = @()
 
+    if ($null -eq $script:tabControl) {
+        Write-Host "script:tabControl est null"
+        return $completedTabs
+    }
+
     foreach ($tabName in $script:activeChecks.Keys) {
-        if (-not $script:activeChecks[$tabName]) { continue }
+        Write-Host "Vérification de l'onglet : $tabName"
+        if (-not $script:activeChecks[$tabName]) { 
+            Write-Host "Onglet $tabName non actif, passage au suivant"
+            continue 
+        }
 
         $tabState = $script:conditionStates[$tabName]
+        if ($null -eq $tabState) {
+            Write-Host "Pas d'état pour l'onglet $tabName"
+            continue
+        }
+
         $allMet = $true
         $anyMet = $false
 
+        $tabPage = $script:tabControl.TabPages | Where-Object { $_.Text -eq $tabName }
+        if ($null -eq $tabPage) {
+            Write-Host "Onglet $tabName non trouvé"
+            continue
+        }
+
         foreach ($condition in $tabState.Conditions.Keys) {
+            Write-Host "Vérification de la condition : $condition"
             if (-not $tabState.Conditions[$condition]) {
-                $tabPage = $script:tabControl.TabPages | Where-Object { $_.Text -eq $tabName }
                 $checkbox = $tabPage.Controls | Where-Object { $_ -is [System.Windows.Forms.CheckBox] -and $_.Text -eq $condition }
                 $textbox = $tabPage.Controls | Where-Object { $_ -is [System.Windows.Forms.TextBox] -and $_.Name -like "*$condition*" }
                 $radioYes = $tabPage.Controls | Where-Object { $_ -is [System.Windows.Forms.RadioButton] -and $_.Text -eq [char]0x2713 }
+
+                if ($null -eq $checkbox -or $null -eq $textbox -or $null -eq $radioYes) {
+                    Write-Host "Un ou plusieurs contrôles manquants pour la condition $condition"
+                    continue
+                }
 
                 $conditionMet = switch ($condition) {
                     "File exist" { Check-FileExist $tabName $textbox.Text $radioYes.Checked }
@@ -709,14 +758,19 @@ function Check-Conditions {
                     "Reg key exist" { Check-RegKeyExist $tabName $textbox.Text $radioYes.Checked }
                     "Wait time" { Check-WaitTime $tabName $textbox.Text }
                     "Execute then wait closing" { Check-ExecuteAndWait $tabName $textbox.Text }
+                    default { 
+                        Write-Host "Condition inconnue : $condition"
+                        $false 
+                    }
                 }
 
                 if ($conditionMet) {
                     $tabState.Conditions[$condition] = $true
                     $anyMet = $true
-                    & $script:updateLogsFunction "Check" "Condition '$condition' met for $tabName"
+                    Write-Host "Condition '$condition' remplie pour $tabName"
                 } else {
                     $allMet = $false
+                    Write-Host "Condition '$condition' non remplie pour $tabName"
                 }
             } else {
                 $anyMet = $true
@@ -724,67 +778,103 @@ function Check-Conditions {
         }
 
         if (($tabState.AllConditions -and $allMet) -or (-not $tabState.AllConditions -and $anyMet)) {
-            & $script:updateLogsFunction "Complete" "All required conditions met for $tabName"
+            Write-Host "Toutes les conditions requises sont remplies pour $tabName"
             $completedTabs += $tabName
         }
     }
 
+    Write-Host "Fin de Check-Conditions"
     return $completedTabs
 }
 
 function Update-Conditions {
-    $pendingCount = 0
-    foreach ($tabName in $script:activeChecks.Keys) {
-        if ($script:activeChecks[$tabName] -and $script:conditionStates.ContainsKey($tabName)) {
-            $pendingCount += ($script:conditionStates[$tabName].Conditions.Values | Where-Object { -not $_ }).Count
+    param(
+        [string]$TabName,
+        [string]$ConditionType
+    )
+    
+    Write-Host "Mise à jour des conditions pour l'onglet: $TabName, Condition: $ConditionType"
+    
+    $tabPage = $script:tabControl.TabPages | Where-Object { $_.Text -eq $TabName }
+    
+    if ($null -eq $tabPage) {
+        Write-Host "Onglet $TabName non trouvé"
+        return
+    }
+    
+    $panel = $tabPage.Controls | Where-Object { $_ -is [System.Windows.Forms.Panel] }
+    if ($null -eq $panel) {
+        Write-Host "Panel non trouvé dans l'onglet $TabName"
+        return
+    }
+    
+    $checkbox = $panel.Controls | Where-Object { $_ -is [System.Windows.Forms.CheckBox] -and $_.Text -eq $ConditionType }
+    if ($null -eq $checkbox) {
+        Write-Host "Checkbox pour $ConditionType non trouvé dans l'onglet $TabName"
+        return
+    }
+    
+    Write-Host "Checkbox trouvé : $($checkbox.Text), Checked: $($checkbox.Checked)"
+    
+    if (-not $script:conditionStates.ContainsKey($TabName)) {
+        $script:conditionStates[$TabName] = @{
+            Conditions = @{}
         }
     }
+    
+    $script:conditionStates[$TabName].Conditions[$ConditionType] = $checkbox.Checked
+    
+    $pendingCount = ($script:conditionStates.Values.Conditions.Values | Where-Object { $_ -eq $true }).Count
     if ($null -ne $script:pendingCount) {
         $script:pendingCount.Text = $pendingCount.ToString()
     }
     
-    & $script:updateLogsFunction "Check" "Checking conditions..."
+    Write-Host "État mis à jour pour $ConditionType dans $TabName : $($checkbox.Checked)"
+    
+    if ($null -ne $script:updateLogsFunction) {
+        & $script:updateLogsFunction "Check" "Condition $ConditionType mise à jour pour $TabName"
+    }
+    Write-Host "après condition type"
 }
 
 function Start-ConditionCheck {
-    while ($true) {
-        if ($script:activeChecks.Count -eq 0) {
-            if ($null -ne $script:updateLogsFunction) {
-                & $script:updateLogsFunction "Info" "No active checks. Waiting for triggers to be activated."
-            }
-            Start-Sleep -Seconds 5
-            continue
-        }
+    Write-Host "Début de Start-ConditionCheck"
+    Write-Host "script:tabControl existe : $($null -ne $script:tabControl)"
+    Write-Host "Nombre d'onglets : $($script:tabControl.TabPages.Count)"
 
+    while ($true) {
+
+        Write-Host "Appel de Check-Conditions"
         $completedTabs = Check-Conditions
+        Write-Host "Onglets complétés : $($completedTabs -join ', ')"
+
         foreach ($completedTab in $completedTabs) {
-            if ($null -ne $script:updateLogsFunction) {
-                & $script:updateLogsFunction "Action" "Executing actions for $completedTab"
+            Write-Host "Exécution des actions pour $completedTab"
             
-                # Exécuter les actions associées à l'onglet complété
-                $script:activeChecks[$completedTab] = $false
-                $script:conditionStates.Remove($completedTab)
-                
-                # Décocher le trigger correspondant
-                switch ($completedTab) {
-                    "Start (if reset)" { $global:activate_start_trigger_checkbox.Checked = $false }
-                    "Pause (if started)" { $global:activate_pause_trigger_checkbox.Checked = $false }
-                    "Resume (if paused)" { $global:activate_resume_trigger_checkbox.Checked = $false }
-                    "Reset all" { $global:activate_reset_trigger_checkbox.Checked = $false }
-                }
+            # Exécuter les actions associées à l'onglet complété
+            $script:activeChecks[$completedTab] = $false
+            $script:conditionStates.Remove($completedTab)
+            
+            # Décocher le trigger correspondant
+            switch ($completedTab) {
+                "Start (if reset)" { $global:activate_start_trigger_checkbox.Checked = $false }
+                "Pause (if started)" { $global:activate_pause_trigger_checkbox.Checked = $false }
+                "Resume (if paused)" { $global:activate_resume_trigger_checkbox.Checked = $false }
+                "Reset all" { $global:activate_reset_trigger_checkbox.Checked = $false }
             }
         }
         
         if (-not ($script:activeChecks.Values -contains $true)) {
-            if ($null -ne $script:updateLogsFunction) {
-                & $script:updateLogsFunction "Complete" "All active checks completed"
-            }
+            Write-Host "Toutes les vérifications actives sont terminées"
             break
         }
         
         Start-Sleep -Seconds 5
+        Write-Host "Mise à jour des conditions"
         Update-Conditions
     }
+
+    Write-Host "Fin de Start-ConditionCheck"
 }
 
 $AutoButton.Add_Click({ 
