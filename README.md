@@ -1,7 +1,3 @@
-A disk space tracking utility with a graphical user interface. 
+Les boutons radio yes/no ne sont pas correctement mis à jour, cela affiche toujours yes
 
-Monitor changes in free disk space on selected drives, record disk usage over time, and provides read/write speed information. 
-
-The tool features a unit conversion calculator, the ability to generate reports, and buttons to copy disk space changes in various units. 
-
-It also includes an "Auto" interface for setting up conditional monitoring of files and processes to trigger start, pause, resume, reset
+Et Erreur lorsque je clique sur une des auto-trigger checkbox start pause resume reset : "System.Management.Automation.RuntimeException: Indexation impossible dans un tableau Null."
