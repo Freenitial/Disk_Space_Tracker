@@ -77,6 +77,10 @@ $script:selectedDrive = "C:"
 $script:readCounter = $null
 $script:writeCounter = $null
 $script:End_Trigger = $false
+$script:conditionStates = @{}
+$script:activeChecks = @{}
+$script:pendingCount = $null
+$script:tabControl=$null
 $darkBackground = [System.Drawing.Color]::FromArgb(30, 30, 30)
 $darkForeground = [System.Drawing.Color]::FromArgb(240, 240, 240)
 $accentColor = [System.Drawing.Color]::FromArgb(0, 120, 215)
@@ -225,6 +229,7 @@ function Browse-Process {
     $processForm.Text = "Select a Process"
     $processForm.Size = New-Object System.Drawing.Size(550, 550)
     $processForm.StartPosition = "CenterScreen"; $processForm.FormBorderStyle = "FixedDialog"
+    $processForm.ForeColor = $darkForeground ; $processForm.BackColor = $darkBackground
     $searchLabel = gen $processForm "Label" "Search :" 10 10 60 30 'Font=New-Object System.Drawing.Font("Segoe UI", 10)'
     $searchBox = gen $processForm "TextBox" "" 75 10 300 30 'Font=New-Object System.Drawing.Font("Segoe UI", 10)'
     $refreshButton = gen $processForm "Button" "Refresh" 385 10 100 30 'Font=New-Object System.Drawing.Font("Segoe UI", 10)'
@@ -442,124 +447,368 @@ $loadingLabel.Text = "Loading Auto Panel..."
 
 
 
-function Show-AutoInterface {
-    $mainpanel.Visible = $false
-    $AutoPanel.Visible = $true
-    if ($AutoPanel.Controls.Count -eq 0) {
-        $backButton = gen $AutoPanel "Button" ($([char]0x2B9C) +"    Back") 10 40 86 21
-        $backButton.Add_Click({
-            $AutoPanel.Visible = $false
-            $mainpanel.Visible = $true
-        })
-        # Ajout des onglets
-        $tabControl = gen $AutoPanel "TabControl" "" 9 70 517 196
-        $yPos = 10
-        $waitLabel = gen $AutoPanel "Label" "NOT IMPLEMENTED" 359 40 180 20 'Font=Arial,10,Bold' "ForeColor=red"
-        $checkBoxes = @("File exist", "File used", "Process exist", "Reg key exist")
-        $tabPages = @("Start when reset", "Pause when started", "Resume when paused", "Reset all")
-        foreach ($tabName in $tabPages) {
-            $tabPage = New-Object System.Windows.Forms.TabPage
-            $tabPage.Text = $tabName
-            $tabPage.BackColor = $darkBackground
-            $tabPage.ForeColor = $darkForeground
-            $tabPanel = New-Object System.Windows.Forms.Panel
-            $tabPanel.Dock = [System.Windows.Forms.DockStyle]::Fill
-            $tabPage.Controls.Add($tabPanel)
-            $xPos = 105; $yPos = 0
-            $All_or_Any_groupBox = gen $tabPanel "GroupBox" "" 0 2 80 54
-            $All_or_Any_groupBox_Label = gen $All_or_Any_groupBox "Label" "Conditions:" 5 $yPos 70 13 'Font=Arial,8,Bold'
-            $radioButton_All_Selected = gen $All_or_Any_groupBox "RadioButton" "All (and)" 5 ($yPos + 17) 65 16
-            $radioButton_All_Selected.Checked = $true
-            $radioButton_Any_Selected = gen $All_or_Any_groupBox "RadioButton" "Any (or)" 5 ($yPos + 33) 65 16
 
-            $Auto_After_groupBox = gen $tabPanel "GroupBox" "" 0 60 80 $(if ($tabName -eq "Reset all") { 102 } else { 86 })
-            $Auto_After_groupBox_Label = gen $Auto_After_groupBox "Label" "After:" 5 $yPos 37 13 'Font=Arial,8,Bold'
-            $Loop_checkbox = gen $Auto_After_groupBox "CheckBox" "Loop" 5 ($yPos + 17) 70 17
-            $Report_checkbox = gen $Auto_After_groupBox "CheckBox" "Report" 5 ($yPos + 33) 70 17
-            $Report_Checkbox.Add_CheckedChanged({ Update-Conditions })
-            $Bip_alert_checkbox = gen $Auto_After_groupBox "CheckBox" "Bip" 5 ($yPos + 49) 70 17
-            $Popup_alert_checkbox = gen $Auto_After_groupBox "CheckBox" "Popup" 5 ($yPos + 65) 70 17
-            if ($tabName -eq "Reset all") {$Restart_checkbox=gen $Auto_After_groupBox "CheckBox" "Restart" 5 ($yPos+82) 70 17 "Checked=$true"}
-            
-            $yPos = 1
-            $TimelineLabel = gen $tabPanel "CheckBox" "Wait time (format hh:mm:ss)" $xPos $yPos 185 20
-            $TimelineTextbox = gen $tabPanel "TextBox" "" ($xPos + 190) $yPos 214 20
-            $yPos += 19
-            $ExeclineLabel = gen $tabPanel "CheckBox" "Execute, then wait closing" $xPos $yPos 185 20
-            $ExecLinePath = gen $tabPanel "TextBox" "" ($xPos + 190) $yPos 156 20
-            $ExecbrowseButton = gen $tabPanel "Button" "Browse" ($xPos + 345) $yPos 60 20
-            $ExecbrowseButton.Add_Click({ Browse-File -associatedTextBox $ExecLinePath })
-            $yPos += 19
-            foreach ($text in $checkBoxes) {
-                $checkBox = gen $tabPanel "CheckBox" $text $xPos $yPos 108 20
-                $checkBox.Add_CheckedChanged({ Update-Conditions })
-                $groupBox_YesNo = gen $tabPanel "GroupBox" "" ($xPos + 108) ($yPos-5) 80 22
-                $radioButton_Yes = gen $tabPanel "RadioButton" $([char]0x2713) 0 4 40 20
-                $radioButton_Yes.Checked = $true
-                $radioButton_No = gen $tabPanel "RadioButton" $([char]0x2717) 40 4 40 20
-                $groupBox_YesNo.Controls.AddRange(@($radioButton_Yes, $radioButton_No))
-                if ($text.ToLower() -like "*reg*") { $textBoxWidth = 214 } 
-                else { $textBoxWidth = 156 }
-                $textBox = gen $tabPanel "TextBox" "" ($xPos + 190) ($yPos - 1) $textBoxWidth 20
-                $textBox.Name = "TextBox_$($checkBoxes.IndexOf($text))_$tabName"
-                if ($text.ToLower() -notlike "*reg*") {
-                    $browseButton = gen $tabPanel "Button" "Browse" ($xPos + 345) ($yPos - 1) 60 20
-                    $scriptBlock = {
-                        param($associatedTextBox, $labelText)
-                        if ($labelText.ToLower().Contains("process")) { Browse-Process -associatedTextBox $associatedTextBox }
-                        else { Browse-File -associatedTextBox $associatedTextBox }
-                    }.GetNewClosure()
-                    $browseButton.Add_Click($ExecutionContext.InvokeCommand.NewScriptBlock("& {$scriptBlock} `$this.Parent.Controls['$($textBox.Name)'] `'$($checkBox.Text)'"))
+function Show-AutoInterface {
+    try {
+        Write-Host "Début de Show-AutoInterface"
+        $mainpanel.Visible = $false
+        $AutoPanel.Visible = $true
+        if ($AutoPanel.Controls.Count -eq 0) {
+            Write-Host "Création des contrôles de AutoPanel"
+            $backButton = gen $AutoPanel "Button" ($([char]0x2B9C) +"    Back") 10 38 86 21
+            $backButton.Add_Click({
+                $AutoPanel.Visible = $false
+                $mainpanel.Visible = $true
+            })
+
+            $xPos = 120
+            $activate_triggers_label = gen $AutoPanel "Label" "Auto-Trigger :" $xPos 40 97 20 'Font=Arial,10,Bold' ; $xPos+=108
+            $global:activate_start_trigger_checkbox = gen $AutoPanel "CheckBox" "Start" $xPos 40 60 20 ; $xPos+=59
+            $global:activate_pause_trigger_checkbox = gen $AutoPanel "CheckBox" "Pause" $xPos 40 60 20 ; $xPos+=66
+            $global:activate_resume_trigger_checkbox = gen $AutoPanel "CheckBox" "Resume" $xPos 40 65 20 ; $xPos+=75
+            $global:activate_reset_trigger_checkbox = gen $AutoPanel "CheckBox" "Reset" $xPos 40 65 20
+
+            # Ajoutez des gestionnaires d'événements pour les checkboxes de trigger
+            $global:activate_start_trigger_checkbox.Add_CheckedChanged({ Update-ActiveChecks "Start (if reset)" })
+            $global:activate_pause_trigger_checkbox.Add_CheckedChanged({ Update-ActiveChecks "Pause (if started)" })
+            $global:activate_resume_trigger_checkbox.Add_CheckedChanged({ Update-ActiveChecks "Resume (if paused)" })
+            $global:activate_reset_trigger_checkbox.Add_CheckedChanged({ Update-ActiveChecks "Reset all" })
+
+            # Ajout des onglets
+            $script:tabControl = gen $AutoPanel "tabControl" "" 9 70 517 196
+            $yPos = 10
+
+            $used_exist_checkBoxes = @("File exist", "File used", "Process exist", "Reg key exist")
+            $tabPages = @("Start (if reset)", "Pause (if started)", "Resume (if paused)", "Reset all", "Info", "Logs")
+            foreach ($tabName in $tabPages) {
+                $tabPage = New-Object System.Windows.Forms.TabPage
+                $tabPage.Text = $tabName
+                $tabPage.BackColor = $darkBackground
+                $tabPage.ForeColor = $darkForeground
+                $tabPanel = New-Object System.Windows.Forms.Panel
+                $tabPanel.Dock = [System.Windows.Forms.DockStyle]::Fill
+                $tabPage.Controls.Add($tabPanel)
+
+                if ($tabName -eq "Info") {
+                    $infoTextBox = gen $tabPanel "RichTextBox" "" 10 20 490 130 'Multiline=true' 'ReadOnly=true'
+                    $infoTextBox.AppendText("This automation tool allows you to set up various conditions and actions for different scenarios.`n`n")
+                    $infoTextBox.AppendText("1. Select the appropriate tab based on the action you want to automate.`n`n")
+                    $infoTextBox.AppendText("2. Set the conditions using used_exist_checkBoxes and input fields.`n`n")
+                    $infoTextBox.AppendText("3. Configure the 'After' actions like Loop (= wait next opportunity), Report, Bip, and Popup.`n`n")
+                    $infoTextBox.AppendText("4. Check Auto-Triggers will monitor conditions of corresponding tabs modes to activate.")
                 }
-                $yPos += 19
+                elseif ($tabName -eq "Logs") {
+                    $logLabel = gen $tabPanel "Label" "Automation Logs" 10 10 200 20 'Font=Arial,12,Bold'
+                    $logListView = gen $tabPanel "ListView" "" 10 40 490 120 'View=Details' 'FullRowSelect=true' 'GridLines=true'
+                    $logListView.Columns.Add("Time", 100)
+                    $logListView.Columns.Add("Mode", 65)
+                    $logListView.Columns.Add("Event", 303)
+                    $pendingLabel = gen $tabPanel "Label" "Pending Conditions:" 10 170 150 20 'Font=Arial,10'
+                    $script:pendingCount = gen $tabPanel "Label" "0" 160 170 30 20 'Font=Arial,10,Bold' "ForeColor=#FFD700"
+                    $script:updateLogsFunction = {
+                        param($mode, $event)
+                        $item = New-Object System.Windows.Forms.ListViewItem((Get-Date -Format "HH:mm:ss"))
+                        $item.SubItems.Add($mode)
+                        $item.SubItems.Add($event)
+                        $logListView.Items.Insert(0, $item)
+                        if ($logListView.Items.Count > 100) { $logListView.Items.RemoveAt(100) }
+                    }
+                }
+                else {
+                    $xPos = 105; $yPos = 0
+                    $All_or_Any_groupBox = gen $tabPanel "GroupBox" "" 0 2 80 54
+                    $All_or_Any_groupBox_Label = gen $All_or_Any_groupBox "Label" "Conditions:" 5 $yPos 70 13 'Font=Arial,8,Bold'
+                    $radioButton_All_Selected = gen $All_or_Any_groupBox "RadioButton" "All (and)" 5 ($yPos + 17) 65 16
+                    $radioButton_All_Selected.Checked = $true
+                    $radioButton_Any_Selected = gen $All_or_Any_groupBox "RadioButton" "Any (or)" 5 ($yPos + 33) 65 16
+
+                    $Auto_After_groupBox = gen $tabPanel "GroupBox" "" 0 60 80 $(if ($tabName -eq "Reset all") { 102 } else { 86 })
+                    $Auto_After_groupBox_Label = gen $Auto_After_groupBox "Label" "After:" 5 $yPos 37 13 'Font=Arial,8,Bold'
+                    $Loop_checkbox = gen $Auto_After_groupBox "CheckBox" "Loop" 5 ($yPos + 17) 70 17
+                    $Report_checkbox = gen $Auto_After_groupBox "CheckBox" "Report" 5 ($yPos + 33) 70 17
+                    $Report_Checkbox.Add_CheckedChanged({ Update-Conditions })
+                    $Bip_alert_checkbox = gen $Auto_After_groupBox "CheckBox" "Bip" 5 ($yPos + 49) 70 17
+                    $Popup_alert_checkbox = gen $Auto_After_groupBox "CheckBox" "Popup" 5 ($yPos + 65) 70 17
+                    if ($tabName -eq "Reset all") {$Restart_checkbox=gen $Auto_After_groupBox "CheckBox" "Restart" 5 ($yPos+82) 70 17 "Checked=$true"}
+                    
+                    $yPos = 1
+                    $TimelineLabel = gen $tabPanel "CheckBox" "Wait time (format hh:mm:ss)" $xPos $yPos 185 20
+                    $TimelineTextbox = gen $tabPanel "TextBox" "" ($xPos + 190) $yPos 214 20
+                    $yPos += 19
+                    $ExeclineLabel = gen $tabPanel "CheckBox" "Execute, then wait closing" $xPos $yPos 185 20
+                    $ExecLinePath = gen $tabPanel "TextBox" "" ($xPos + 190) $yPos 156 20
+                    $ExecbrowseButton = gen $tabPanel "Button" "Browse" ($xPos + 345) $yPos 60 20
+                    $ExecbrowseButton.Add_Click({ Browse-File -associatedTextBox $ExecLinePath })
+                    $yPos += 19
+                    foreach ($text in $used_exist_checkBoxes) {
+                        $checkBox = gen $tabPanel "CheckBox" $text $xPos $yPos 108 20
+                        $checkBox.Add_CheckedChanged({ Update-Conditions })
+                        $groupBox_YesNo = gen $tabPanel "GroupBox" "" ($xPos + 108) ($yPos-5) 80 22
+                        $radioButton_Yes = gen $tabPanel "RadioButton" $([char]0x2713) 0 4 40 20
+                        $radioButton_Yes.Checked = $true
+                        $radioButton_No = gen $tabPanel "RadioButton" $([char]0x2717) 40 4 40 20
+                        $groupBox_YesNo.Controls.AddRange(@($radioButton_Yes, $radioButton_No))
+                        if ($text.ToLower() -like "*reg*") { $textBoxWidth = 214 } 
+                        else { $textBoxWidth = 156 }
+                        $textBox = gen $tabPanel "TextBox" "" ($xPos + 190) ($yPos - 1) $textBoxWidth 20
+                        $textBox.Name = "TextBox_$($used_exist_checkBoxes.IndexOf($text))_$tabName"
+                        if ($text.ToLower() -notlike "*reg*") {
+                            $browseButton = gen $tabPanel "Button" "Browse" ($xPos + 345) ($yPos - 1) 60 20
+                            $scriptBlock = {
+                                param($associatedTextBox, $labelText)
+                                if ($labelText.ToLower().Contains("process")) { Browse-Process -associatedTextBox $associatedTextBox }
+                                else { Browse-File -associatedTextBox $associatedTextBox }
+                            }.GetNewClosure()
+                            $browseButton.Add_Click($ExecutionContext.InvokeCommand.NewScriptBlock("& {$scriptBlock} `$this.Parent.Controls['$($textBox.Name)'] `'$($checkBox.Text)'"))
+                        }
+                        $yPos += 19
+                    }
+                    # Analyze Text File section
+                    $CheckboxlineLabel = gen $tabPanel "CheckBox" "Analyze text file" $xPos $yPos 121 20 "ForeColor=#ebdebf"
+                    $textBox_Line_Browse = gen $tabPanel "TextBox" "" ($xPos + 190) ($yPos - 1) 156 20 "Name=TextBox_Line_Browse"
+                    $browseButton_Line = gen $tabPanel "Button" "Browse" ($xPos + 345) ($yPos - 1) 60 20
+                    $browseButton_Line.Add_Click({ Browse-File -associatedTextBox $textBox_Line_Browse })
+                    $yPos += 19; $xPos += 17
+                    $ContentlineLabel = gen $tabPanel "Label" "Line content to search :" ($xPos) $yPos 122 15 "ForeColor=#ebdebf"
+                    $textBox_Line_Content = gen $tabPanel "TextBox" "" ($xPos + 173) ($yPos - 3) 214 20
+                    $yPos += 19
+                    $line_number_Label = gen $tabPanel "Label" "At line n$([char]176)" $xPos ($yPos-1) 60 20 "ForeColor=#ebdebf"
+                    $textBox_Line = gen $tabPanel "TextBox" "any" ($xPos + 60) ($yPos - 4) 30 18
+                    $xPos += 25
+                    $radioButtons = @(
+                        @("Equal", "=", ($xPos + 83), 32),
+                        @("Contains", "$([char]33)=", ($xPos + 123), 40),
+                        @("NOT_Equal", "$([char]10038)", ($xPos + 168), 34),
+                        @("NOT_Contains", "$([char]33)$([char]10038)", ($xPos + 212), 44),
+                        @("StartsWith", "Starts", ($xPos + 260), 54),
+                        @("EndsWith", "Ends", ($xPos + 317), 60)
+                    )
+                    foreach ($rb in $radioButtons) {
+                        ${"radioButton_$($rb[0])"} = gen $tabPanel "RadioButton" $rb[1] ([int]$rb[2]) ($yPos-3) ([int]$rb[3]) 20 "ForeColor=#ebdebf"
+                        $tabPanel.Controls.Add(${"radioButton_$($rb[0])"})
+                        ${"radioButton_$($rb[0])"}.Checked = ($rb[1] -eq "=")
+                    }
+                }
+                $script:tabControl.TabPages.Add($tabPage)
             }
-            # Analyze Text File section
-            $CheckboxlineLabel = gen $tabPanel "CheckBox" "Analyze text file" $xPos $yPos 121 20 "ForeColor=#ebdebf"
-            $textBox_Line_Browse = gen $tabPanel "TextBox" "" ($xPos + 190) ($yPos - 1) 156 20 "Name=TextBox_Line_Browse"
-            $browseButton_Line = gen $tabPanel "Button" "Browse" ($xPos + 345) ($yPos - 1) 60 20
-            $browseButton_Line.Add_Click({ Browse-File -associatedTextBox $textBox_Line_Browse })
-            $yPos += 19; $xPos += 17
-            $ContentlineLabel = gen $tabPanel "Label" "Line content to search :" ($xPos) $yPos 122 15 "ForeColor=#ebdebf"
-            $textBox_Line_Content = gen $tabPanel "TextBox" "" ($xPos + 173) ($yPos - 3) 214 20
-            $yPos += 19
-            $line_number_Label = gen $tabPanel "Label" "At line n$([char]176)" $xPos ($yPos-1) 60 20 "ForeColor=#ebdebf"
-            $textBox_Line = gen $tabPanel "TextBox" "any" ($xPos + 60) ($yPos - 4) 30 18
-            $xPos += 25
-            $radioButtons = @(
-                @("Equal", "=", ($xPos + 83), 32),
-                @("Contains", "$([char]33)=", ($xPos + 123), 40),
-                @("NOT_Equal", "$([char]10038)", ($xPos + 168), 34),
-                @("NOT_Contains", "$([char]33)$([char]10038)", ($xPos + 212), 44),
-                @("StartsWith", "Starts", ($xPos + 260), 54),
-                @("EndsWith", "Ends", ($xPos + 317), 60)
-            )
-            foreach ($rb in $radioButtons) {
-                ${"radioButton_$($rb[0])"} = gen $tabPanel "RadioButton" $rb[1] ([int]$rb[2]) ($yPos-3) ([int]$rb[3]) 20 "ForeColor=#ebdebf"
-                $tabPanel.Controls.Add(${"radioButton_$($rb[0])"})
-                ${"radioButton_$($rb[0])"}.Checked = ($rb[1] -eq "=")
-            }
-            $tabControl.TabPages.Add($tabPage)
+            $AutoPanel.Controls.Add($script:tabControl)
         }
-        $AutoPanel.Controls.Add($tabControl)
+        Write-Host "Fin de Show-AutoInterface"
+    } catch {
+        Write-Host "Erreur dans Show-AutoInterface : $_"
+        throw  # Relance l'exception pour qu'elle soit capturée par le bloc try-catch parent
     }
 }
 
+function Update-ActiveChecks {
+    param($tabName)
+    
+    $triggerCheckbox = switch ($tabName) {
+        "Start (if reset)" { $global:activate_start_trigger_checkbox }
+        "Pause (if started)" { $global:activate_pause_trigger_checkbox }
+        "Resume (if paused)" { $global:activate_resume_trigger_checkbox }
+        "Reset all" { $global:activate_reset_trigger_checkbox }
+    }
+
+    if ($triggerCheckbox.Checked) {
+        $script:activeChecks[$tabName] = $true
+        Initialize-ConditionCheck $tabName
+    } else {
+        $script:activeChecks[$tabName] = $false
+        $script:conditionStates.Remove($tabName)
+    }
+
+    if ($null -ne $script:updateLogsFunction) {
+        & $script:updateLogsFunction "Config" ("Updated active checks for {0}: {1}" -f $tabName, $triggerCheckbox.Checked)
+    }
+    Update-Conditions
+}
+
+function Initialize-ConditionCheck {
+    param($tabName)
+
+    $tabPage = $script:tabControl.TabPages | Where-Object { $_.Text -eq $tabName }
+    $script:conditionStates[$tabName] = @{
+        AllConditions = $tabPage.Controls['All_or_Any_groupBox'].Controls['radioButton_All_Selected'].Checked
+        Conditions = @{}
+    }
+    
+    $conditions = @("File exist", "File used", "Process exist", "Reg key exist", "Wait time", "Execute then wait closing")
+    foreach ($condition in $conditions) {
+        $checkbox = $tabPage.Controls | Where-Object { $_ -is [System.Windows.Forms.CheckBox] -and $_.Text -eq $condition }
+        if ($checkbox -and $checkbox.Checked) {
+            $script:conditionStates[$tabName].Conditions[$condition] = $false
+        }
+    }
+}
+
+function Check-FileExist {
+    param($tabName, $filePath, $shouldExist)
+    $exists = Test-Path $filePath
+    return ($exists -eq $shouldExist)
+}
+
+function Check-FileUsed {
+    param($tabName, $filePath, $shouldBeUsed)
+    $isUsed = $false
+    try {
+        $file = [System.IO.File]::Open($filePath, 'Open', 'Read', 'None')
+        $file.Close()
+    } catch {
+        $isUsed = $true
+    }
+    return ($isUsed -eq $shouldBeUsed)
+}
+
+function Check-ProcessExist {
+    param($tabName, $processName, $shouldExist)
+    $exists = Get-Process $processName -ErrorAction SilentlyContinue
+    return (($null -ne $exists) -eq $shouldExist)
+}
+
+function Check-RegKeyExist {
+    param($tabName, $regPath, $shouldExist)
+    $exists = Test-Path $regPath
+    return ($exists -eq $shouldExist)
+}
+
+function Check-WaitTime {
+    param($tabName, $waitTime)
+    $currentTime = Get-Date
+    $targetTime = [DateTime]::ParseExact($waitTime, "HH:mm:ss", $null)
+    return ($currentTime -ge $targetTime)
+}
+
+function Check-ExecuteAndWait {
+    param($tabName, $execPath)
+    Start-Process $execPath -Wait
+    return $true
+}
+
+function Check-Conditions {
+    $completedTabs = @()
+
+    foreach ($tabName in $script:activeChecks.Keys) {
+        if (-not $script:activeChecks[$tabName]) { continue }
+
+        $tabState = $script:conditionStates[$tabName]
+        $allMet = $true
+        $anyMet = $false
+
+        foreach ($condition in $tabState.Conditions.Keys) {
+            if (-not $tabState.Conditions[$condition]) {
+                $tabPage = $script:tabControl.TabPages | Where-Object { $_.Text -eq $tabName }
+                $checkbox = $tabPage.Controls | Where-Object { $_ -is [System.Windows.Forms.CheckBox] -and $_.Text -eq $condition }
+                $textbox = $tabPage.Controls | Where-Object { $_ -is [System.Windows.Forms.TextBox] -and $_.Name -like "*$condition*" }
+                $radioYes = $tabPage.Controls | Where-Object { $_ -is [System.Windows.Forms.RadioButton] -and $_.Text -eq [char]0x2713 }
+
+                $conditionMet = switch ($condition) {
+                    "File exist" { Check-FileExist $tabName $textbox.Text $radioYes.Checked }
+                    "File used" { Check-FileUsed $tabName $textbox.Text $radioYes.Checked }
+                    "Process exist" { Check-ProcessExist $tabName $textbox.Text $radioYes.Checked }
+                    "Reg key exist" { Check-RegKeyExist $tabName $textbox.Text $radioYes.Checked }
+                    "Wait time" { Check-WaitTime $tabName $textbox.Text }
+                    "Execute then wait closing" { Check-ExecuteAndWait $tabName $textbox.Text }
+                }
+
+                if ($conditionMet) {
+                    $tabState.Conditions[$condition] = $true
+                    $anyMet = $true
+                    & $script:updateLogsFunction "Check" "Condition '$condition' met for $tabName"
+                } else {
+                    $allMet = $false
+                }
+            } else {
+                $anyMet = $true
+            }
+        }
+
+        if (($tabState.AllConditions -and $allMet) -or (-not $tabState.AllConditions -and $anyMet)) {
+            & $script:updateLogsFunction "Complete" "All required conditions met for $tabName"
+            $completedTabs += $tabName
+        }
+    }
+
+    return $completedTabs
+}
 
 function Update-Conditions {
-    # Fonction à implémenter pour vérifier les conditions
-    $script:End_Trigger = $false
-    # Logique pour vérifier toutes les conditions cochées
-    # Si toutes les conditions sont remplies, définir $script:End_Trigger = $true
-    Write-Host "Conditions update not implemented yet"
+    $pendingCount = 0
+    foreach ($tabName in $script:activeChecks.Keys) {
+        if ($script:activeChecks[$tabName] -and $script:conditionStates.ContainsKey($tabName)) {
+            $pendingCount += ($script:conditionStates[$tabName].Conditions.Values | Where-Object { -not $_ }).Count
+        }
+    }
+    if ($null -ne $script:pendingCount) {
+        $script:pendingCount.Text = $pendingCount.ToString()
+    }
+    
+    & $script:updateLogsFunction "Check" "Checking conditions..."
 }
 
-# Ajouter une fonction pour vérifier périodiquement les conditions
 function Start-ConditionCheck {
-    while (-not $script:End_Trigger) { Update-Conditions; Start-Sleep -Seconds 1 }
-    Write-Host "All conditions met!"
+    while ($true) {
+        if ($script:activeChecks.Count -eq 0) {
+            if ($null -ne $script:updateLogsFunction) {
+                & $script:updateLogsFunction "Info" "No active checks. Waiting for triggers to be activated."
+            }
+            Start-Sleep -Seconds 5
+            continue
+        }
+
+        $completedTabs = Check-Conditions
+        foreach ($completedTab in $completedTabs) {
+            if ($null -ne $script:updateLogsFunction) {
+                & $script:updateLogsFunction "Action" "Executing actions for $completedTab"
+            
+                # Exécuter les actions associées à l'onglet complété
+                $script:activeChecks[$completedTab] = $false
+                $script:conditionStates.Remove($completedTab)
+                
+                # Décocher le trigger correspondant
+                switch ($completedTab) {
+                    "Start (if reset)" { $global:activate_start_trigger_checkbox.Checked = $false }
+                    "Pause (if started)" { $global:activate_pause_trigger_checkbox.Checked = $false }
+                    "Resume (if paused)" { $global:activate_resume_trigger_checkbox.Checked = $false }
+                    "Reset all" { $global:activate_reset_trigger_checkbox.Checked = $false }
+                }
+            }
+        }
+        
+        if (-not ($script:activeChecks.Values -contains $true)) {
+            if ($null -ne $script:updateLogsFunction) {
+                & $script:updateLogsFunction "Complete" "All active checks completed"
+            }
+            break
+        }
+        
+        Start-Sleep -Seconds 5
+        Update-Conditions
+    }
 }
 
-$AutoButton.Add_Click({ Show-AutoInterface })
+$AutoButton.Add_Click({ 
+    try {
+        Write-Host "Début de Show-AutoInterface"
+        Show-AutoInterface
+        Write-Host "Fin de Show-AutoInterface"
+        
+        Write-Host "Début de Start-ConditionCheck"
+        Start-ConditionCheck
+        Write-Host "Fin de Start-ConditionCheck"
+    } catch {
+        Write-Host "Une erreur s'est produite lors de l'appel à AutoButton.Add_Click : $_"
+        Write-Host "Pile d'appels :"
+        Get-PSCallStack | Format-Table -AutoSize
+        
+        # Vous pouvez également ajouter des informations sur les objets qui pourraient être null
+        Write-Host "État de certains objets :"
+        Write-Host "AutoPanel existe : $($null -ne $AutoPanel)"
+        Write-Host "mainpanel existe : $($null -ne $mainpanel)"
+        Write-Host "script:tabControl existe : $($null -ne $script:tabControl)"
+        # Ajoutez d'autres objets que vous suspectez ici
+    }
+})
 
 
 
