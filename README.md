@@ -20,11 +20,11 @@ A compact Windows GUI to **track free disk space in real time**, show deltas (ad
 
 **Basic mode**:
 
-<img width="535" height="275" alt="image" src="https://github.com/user-attachments/assets/94d45fb6-01f5-41e1-af5e-90c51b5a36d1" />
+<img width="535" height="275" alt="image" src="https://github.com/user-attachments/assets/71f55080-6c99-4269-b830-c54b20a81e39" />
 
 **Auto mode**:
 
-<img width="835" height="513" alt="image" src="https://github.com/user-attachments/assets/94307a6f-4202-40d5-b228-1614d2d163f1" />
+<img width="835" height="531" alt="image" src="https://github.com/user-attachments/assets/71fe5de9-e166-4644-a1cb-dc16f0cf400a" />
 
 ---
 
