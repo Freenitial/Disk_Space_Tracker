@@ -1,0 +1,26 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DiskSpaceTracker.ViewModels"
+        x:Class="DiskSpaceTracker.Views.ReportWindow"
+        x:DataType="vm:ReportWindowViewModel"
+        x:CompileBindings="True"
+        Title="Disk Space Report"
+        Width="780" Height="560"
+        MinWidth="500" MinHeight="380"
+        WindowStartupLocation="CenterOwner">
+
+    <DockPanel LastChildFill="True">
+        <Border DockPanel.Dock="Bottom" Padding="10">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <Button Content="Copy to Clipboard" Command="{Binding CopyCommand}" />
+                <Button Content="Close" Click="OnClose" />
+            </StackPanel>
+        </Border>
+        <TextBox Text="{Binding Content}"
+                 IsReadOnly="True"
+                 AcceptsReturn="True"
+                 TextWrapping="NoWrap"
+                 FontFamily="Consolas"
+                 Margin="10" />
+    </DockPanel>
+</Window>

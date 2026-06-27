@@ -1,0 +1,76 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DiskSpaceTracker.ViewModels"
+             x:Class="DiskSpaceTracker.Controls.PresetMenuButton"
+             x:Name="Root"
+             x:CompileBindings="True"
+             x:DataType="vm:PresetSelectorViewModel">
+
+    <Button x:Name="RootButton"
+            Padding="8,4"
+            HorizontalAlignment="Stretch"
+            HorizontalContentAlignment="Stretch">
+        <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Grid.Column="0"
+                       Text="Presets"
+                       VerticalAlignment="Center" />
+            <TextBlock Grid.Column="1"
+                       Text="▾"
+                       Margin="6,0,0,0"
+                       VerticalAlignment="Center" />
+        </Grid>
+
+        <Button.Flyout>
+            <Flyout Placement="Bottom" ShowMode="TransientWithDismissOnPointerMoveAway">
+                <StackPanel MinWidth="220" Spacing="4">
+                    <Button Command="{Binding SaveAsCommand}"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left"
+                            Padding="8,4"
+                            Background="Transparent">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="+" FontWeight="Bold" />
+                            <TextBlock Text="Save current..." />
+                        </StackPanel>
+                    </Button>
+
+                    <Separator />
+
+                    <ItemsControl ItemsSource="{Binding PresetNames}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <Grid Classes="presetRow"
+                                      Background="Transparent"
+                                      ColumnDefinitions="*,Auto">
+                                    <Button Grid.Column="0"
+                                            Content="{Binding}"
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Left"
+                                            Padding="8,4"
+                                            Background="Transparent"
+                                            Tag="{Binding}"
+                                            Click="OnApplyClick" />
+                                    <Button Grid.Column="1"
+                                            Classes="deleteGlyph"
+                                            Width="22"
+                                            Padding="0"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Tag="{Binding}"
+                                            Click="OnDeleteClick">
+                                        <TextBlock Text="✕" />
+                                    </Button>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Text="(no presets yet)"
+                               Opacity="0.6"
+                               IsVisible="{Binding #Root.((vm:PresetSelectorViewModel)DataContext).PresetNames.Count, Converter={StaticResource IsZeroConverter}}"
+                               Margin="8,4" />
+                </StackPanel>
+            </Flyout>
+        </Button.Flyout>
+    </Button>
+</UserControl>

@@ -1,0 +1,234 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DiskSpaceTracker.ViewModels"
+        xmlns:v="using:DiskSpaceTracker.Views"
+        xmlns:cv="using:DiskSpaceTracker.Converters"
+        x:Class="DiskSpaceTracker.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        x:CompileBindings="True"
+        Title="Disk Space Tracker"
+        Icon="avares://DiskSpaceTracker/Assets/logo_48.png"
+        Width="535" Height="275"
+        MinWidth="535" MinHeight="275"
+        Background="{DynamicResource DstBg}"
+        Foreground="{DynamicResource DstFg}"
+        WindowDecorations="None"
+        CanResize="False"
+        WindowStartupLocation="CenterScreen">
+
+    <!--
+      Layout uses a Grid with fixed row heights (30 + 245 + 1 + 270) and fixed column
+      widths (535 + 300). This guarantees:
+        * the title bar, the main canvas, and the logs sidebar all start at the same Y
+          (y=30, no "stair effect")
+        * opening Auto extends the grid downward without shifting any other element
+        * opening Logs adds a column to the right without re-sizing what's already there
+      Visual separators live on individual sections
+      (LogsBorder.BorderThickness="1,0,0,0", separator Row 2).
+    -->
+    <Grid Background="{DynamicResource DstBg}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="30" />     <!-- Title bar -->
+            <RowDefinition Height="245" />    <!-- Main canvas (fixed height) -->
+            <RowDefinition Height="Auto" />   <!-- Auto separator (1px when AutoOpen, 0 when not) -->
+            <RowDefinition Height="Auto" />   <!-- Auto panel (270 when open, 0 when not) -->
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="535" />  <!-- Main width (fixed) -->
+            <ColumnDefinition Width="Auto" /> <!-- Logs sidebar (300 when visible, 0 when not) -->
+        </Grid.ColumnDefinitions>
+
+        <!--
+          =================== TITLE BAR (30px tall, gray→blue gradient) ===================
+          The Image uses the pre-rendered 24px logo asset and explicit HighQuality bitmap
+          interpolation. Avoiding the runtime 630→20 downscale (and using a smooth filter
+          for the residual 24→20) eliminates the stair-stepped appearance.
+        -->
+        <Grid Grid.Row="0" Grid.ColumnSpan="2"
+              x:Name="TitleBar"
+              PointerPressed="OnTitleBarPointerPressed">
+            <Grid.Background>
+                <LinearGradientBrush StartPoint="0%,50%" EndPoint="100%,50%">
+                    <GradientStop Color="#FF3C3C3C" Offset="0.0" />
+                    <GradientStop Color="#FF0078D7" Offset="1.0" />
+                </LinearGradientBrush>
+            </Grid.Background>
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center"
+                        Margin="6,0,0,0">
+                <Image Source="avares://DiskSpaceTracker/Assets/logo_24.png"
+                       Width="20" Height="20"
+                       Margin="0,0,8,0"
+                       VerticalAlignment="Center"
+                       RenderOptions.BitmapInterpolationMode="HighQuality" />
+                <TextBlock Text="Disk Space Tracker"
+                           FontFamily="Arial"
+                           FontSize="14"
+                           FontWeight="Bold"
+                           Foreground="{DynamicResource DstFg}"
+                           VerticalAlignment="Center" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Margin="0,3,0,0">
+                <TextBlock Text="Status: "
+                           FontFamily="Consolas"
+                           FontSize="12"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource DstFg}" />
+                <TextBlock Text="{Binding StatusText}"
+                           FontFamily="Consolas"
+                           FontSize="12"
+                           FontWeight="Bold"
+                           VerticalAlignment="Center"
+                           Foreground="{Binding RunStateValue, Converter={StaticResource StatusColorConverter}}" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Stretch">
+                <Button Classes="titleBarButton"
+                        Content="-"
+                        Width="30" Height="30"
+                        Click="OnMinimizeClick" />
+                <Button Classes="titleBarButton"
+                        Content="X"
+                        Width="40" Height="30"
+                        Click="OnCloseClick" />
+            </StackPanel>
+        </Grid>
+
+        <!-- =================== MAIN CANVAS (left column, row 1, fixed 535x245) =================== -->
+        <Canvas Grid.Row="1" Grid.Column="0"
+                x:Name="MainCanvas"
+                Width="535" Height="245"
+                Background="{DynamicResource DstBg}">
+            <!-- Action buttons row -->
+            <Button Canvas.Left="10"  Canvas.Top="10" Width="58" Height="23"
+                    Content="{Binding StartButtonText}"
+                    Command="{Binding StartOrPauseOrResumeCommand}" />
+            <Button Canvas.Left="67"  Canvas.Top="10" Width="58" Height="23"
+                    Command="{Binding ToggleAutoPanelCommand}"
+                    Background="{Binding AutoPanelOpen, Converter={StaticResource AutoButtonBackgroundConverter}}"
+                    Content="{Binding AutoPanelOpen, Converter={StaticResource AutoArrowConverter}, StringFormat='Auto {0}'}" />
+            <Button Canvas.Left="134" Canvas.Top="10" Width="58" Height="23"
+                    Content="Report"
+                    Command="{Binding ShowReportCommand}" />
+            <Button Canvas.Left="191" Canvas.Top="10" Width="58" Height="23"
+                    Content="Reset"
+                    Command="{Binding ResetCommand}" />
+
+            <!-- Timer + R/W speeds + Copy unit -->
+            <TextBlock Canvas.Left="259" Canvas.Top="14" Width="80" Height="23"
+                       Text="{Binding ElapsedText}"
+                       FontFamily="Consolas" FontSize="12" />
+            <TextBlock Canvas.Left="259" Canvas.Top="45" Width="83" Height="14"
+                       Text="{Binding ReadSpeedText}"
+                       FontFamily="Consolas" FontSize="9" />
+            <TextBlock Canvas.Left="259" Canvas.Top="61" Width="83" Height="14"
+                       Text="{Binding WriteSpeedText}"
+                       FontFamily="Consolas" FontSize="9" />
+            <CheckBox Canvas.Left="261" Canvas.Top="90" Width="83" Height="23"
+                      Content="Copy unit"
+                      IsChecked="{Binding IncludeUnitOnCopy}" />
+
+            <!-- Drive selector -->
+            <ComboBox Canvas.Left="350" Canvas.Top="10" Width="170" Height="23"
+                      ItemsSource="{Binding Drives}"
+                      SelectedItem="{Binding SelectedDrive, Mode=TwoWay}"
+                      IsEnabled="{Binding DriveSelectionEnabled}" />
+
+            <!-- Initial / Current / Diff / Added / Deleted rows -->
+            <TextBlock Canvas.Left="10" Canvas.Top="53" Width="119" Height="23"
+                       Text="Initial free space:" VerticalAlignment="Center" />
+            <TextBox  Canvas.Left="129" Canvas.Top="50" Width="121" Height="23"
+                      Text="{Binding InitialFreeText}" IsReadOnly="True" />
+
+            <TextBlock Canvas.Left="10" Canvas.Top="93" Width="119" Height="23"
+                       Text="Current free space:" VerticalAlignment="Center" />
+            <TextBox  Canvas.Left="129" Canvas.Top="90" Width="121" Height="23"
+                      Text="{Binding CurrentFreeText}" IsReadOnly="True" />
+
+            <TextBlock Canvas.Left="10" Canvas.Top="133" Width="119" Height="23"
+                       Text="Current difference:" VerticalAlignment="Center" />
+            <TextBox  Canvas.Left="129" Canvas.Top="130" Width="121" Height="23"
+                      Text="{Binding CurrentDiffText}" IsReadOnly="True" />
+
+            <TextBlock Canvas.Left="10" Canvas.Top="173" Width="70" Height="23"
+                       Text="Added diff:" VerticalAlignment="Center" />
+            <CheckBox Canvas.Left="80" Canvas.Top="170" Width="50" Height="20"
+                      Content="Max" IsChecked="{Binding IgnoreDeleted}" />
+            <TextBox  Canvas.Left="129" Canvas.Top="170" Width="121" Height="23"
+                      Text="{Binding AddedDiffText}" IsReadOnly="True" />
+
+            <TextBlock Canvas.Left="10" Canvas.Top="213" Width="70" Height="23"
+                       Text="Deleted diff:" VerticalAlignment="Center" />
+            <CheckBox Canvas.Left="80" Canvas.Top="210" Width="50" Height="20"
+                      Content="Max" IsChecked="{Binding IgnoreAdded}" />
+            <TextBox  Canvas.Left="129" Canvas.Top="210" Width="121" Height="23"
+                      Text="{Binding DeletedDiffText}" IsReadOnly="True" />
+
+            <!-- Copy buttons (3 rows × 3 units) -->
+            <Button Canvas.Left="260" Canvas.Top="127" Width="88" Height="26" Content="Copy Bytes" Command="{Binding CopyValueCommand}" CommandParameter="Diff:Bytes" />
+            <Button Canvas.Left="348" Canvas.Top="127" Width="88" Height="26" Content="Copy MB"    Command="{Binding CopyValueCommand}" CommandParameter="Diff:MB" />
+            <Button Canvas.Left="436" Canvas.Top="127" Width="88" Height="26" Content="Copy GB"    Command="{Binding CopyValueCommand}" CommandParameter="Diff:GB" />
+
+            <Button Canvas.Left="260" Canvas.Top="167" Width="88" Height="26" Content="Copy Bytes" Command="{Binding CopyValueCommand}" CommandParameter="Added:Bytes" />
+            <Button Canvas.Left="348" Canvas.Top="167" Width="88" Height="26" Content="Copy MB"    Command="{Binding CopyValueCommand}" CommandParameter="Added:MB" />
+            <Button Canvas.Left="436" Canvas.Top="167" Width="88" Height="26" Content="Copy GB"    Command="{Binding CopyValueCommand}" CommandParameter="Added:GB" />
+
+            <Button Canvas.Left="260" Canvas.Top="207" Width="88" Height="26" Content="Copy Bytes" Command="{Binding CopyValueCommand}" CommandParameter="Deleted:Bytes" />
+            <Button Canvas.Left="348" Canvas.Top="207" Width="88" Height="26" Content="Copy MB"    Command="{Binding CopyValueCommand}" CommandParameter="Deleted:MB" />
+            <Button Canvas.Left="436" Canvas.Top="207" Width="88" Height="26" Content="Copy GB"    Command="{Binding CopyValueCommand}" CommandParameter="Deleted:GB" />
+
+            <!-- Unit converter "card" with 1px black borders (mimicking the 4 panel lines). -->
+            <Border Canvas.Left="349" Canvas.Top="45" Width="176" Height="70"
+                    Background="{DynamicResource DstBg}"
+                    BorderBrush="Black"
+                    BorderThickness="1" />
+            <TextBlock Canvas.Left="355" Canvas.Top="50" Width="100" Height="14"
+                       Text="Unit Conversion"
+                       FontFamily="Arial" FontSize="11" FontWeight="Bold"
+                       HorizontalAlignment="Center" TextAlignment="Center" />
+            <TextBox Canvas.Left="360" Canvas.Top="67" Width="100" Height="23"
+                     x:Name="UnitLeftBox"
+                     Text="{Binding Converter.Left, Mode=TwoWay}"
+                     GotFocus="OnUnitLeftFocus" />
+            <ComboBox Canvas.Left="465" Canvas.Top="66" Width="47" Height="23"
+                      ItemsSource="{Binding Converter.Units}"
+                      SelectedItem="{Binding Converter.LeftUnit, Mode=TwoWay}" />
+            <TextBox Canvas.Left="360" Canvas.Top="87" Width="100" Height="23"
+                     x:Name="UnitRightBox"
+                     Text="{Binding Converter.Right, Mode=TwoWay}"
+                     GotFocus="OnUnitRightFocus" />
+            <ComboBox Canvas.Left="465" Canvas.Top="86" Width="47" Height="23"
+                      ItemsSource="{Binding Converter.Units}"
+                      SelectedItem="{Binding Converter.RightUnit, Mode=TwoWay}" />
+        </Canvas>
+
+        <!-- =================== LOGS SIDEBAR (right column, spans rows 1-3 to fill the entire right side) =================== -->
+        <Border Grid.Row="1" Grid.RowSpan="3" Grid.Column="1"
+                x:Name="LogsBorder"
+                Width="300"
+                BorderBrush="{DynamicResource DstBorder}"
+                BorderThickness="1,0,0,0"
+                Background="{DynamicResource DstBg}"
+                IsVisible="{Binding Logs.IsVisible}">
+            <v:LogsSidebar DataContext="{Binding Logs}" />
+        </Border>
+
+        <!-- =================== AUTO SEPARATOR (1px, left column only, row 2) =================== -->
+        <Border Grid.Row="2" Grid.Column="0"
+                Height="1"
+                Background="{DynamicResource DstBorder}"
+                IsVisible="{Binding AutoPanelOpen}" />
+
+        <!-- =================== AUTO PANEL (left column only, row 3) =================== -->
+        <Border Grid.Row="3" Grid.Column="0"
+                x:Name="AutoBorder"
+                Background="{DynamicResource DstBg}"
+                IsVisible="{Binding AutoPanelOpen}">
+            <v:AutomationPanel DataContext="{Binding Automation}"
+                               HorizontalAlignment="Left" />
+        </Border>
+    </Grid>
+</Window>

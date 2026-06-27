@@ -1,0 +1,16 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="DiskSpaceTracker.Views.ConfirmWindow"
+        x:CompileBindings="True"
+        Width="380" Height="160"
+        SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner">
+    <DockPanel Margin="14" LastChildFill="True">
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,12,0,0">
+            <Button Content="Yes"  MinWidth="90" Click="OnYes" />
+            <Button Content="No"   MinWidth="90" Click="OnNo" IsCancel="True" />
+        </StackPanel>
+        <TextBlock x:Name="MessageText" TextWrapping="Wrap" />
+    </DockPanel>
+</Window>

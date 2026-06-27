@@ -1,0 +1,36 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DiskSpaceTracker.ViewModels"
+        xmlns:s="using:DiskSpaceTracker.Services"
+        x:Class="DiskSpaceTracker.Views.ProcessPickerWindow"
+        x:DataType="vm:ProcessPickerViewModel"
+        x:CompileBindings="True"
+        Title="Select a Process"
+        Width="540" Height="540"
+        MinWidth="380" MinHeight="380"
+        WindowStartupLocation="CenterOwner">
+
+    <Grid Margin="10" RowDefinitions="Auto,*,Auto" RowSpacing="8">
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+            <TextBlock Grid.Column="0" Text="Search:" VerticalAlignment="Center" />
+            <TextBox  Grid.Column="1" Text="{Binding Search, Mode=TwoWay}" />
+            <Button   Grid.Column="2" Content="Refresh" Command="{Binding RefreshCommand}" />
+        </Grid>
+
+        <ListBox Grid.Row="1"
+                 ItemsSource="{Binding Items}"
+                 SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+                 DoubleTapped="OnPick">
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="s:ProcessGroup">
+                    <TextBlock Text="{Binding Display}" />
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <Button Grid.Row="2"
+                Content="OK"
+                HorizontalAlignment="Stretch"
+                Click="OnPick" />
+    </Grid>
+</Window>

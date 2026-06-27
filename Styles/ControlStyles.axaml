@@ -1,0 +1,73 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ctl="using:DiskSpaceTracker.Controls">
+
+    <!--
+      TriggerSwitch geometry:
+        Unchecked: square (12x12, gray) at (0, 1), red line (7x3) at (12, 5).
+                   Square right edge = line left edge → they touch.
+        Checked:   green line (9x3) at (0, 5), square (12x12, gray) at (9, 1).
+                   Line right edge = square left edge → they touch (with overlap).
+        GfxBlock total width: 22, height: 14 (SquareSize=12 plus line geometry).
+      A Canvas is used instead of a Grid so each shape stays at its exact (x,y) and the
+      square + line visibly meet without any sub-pixel gap from layout rounding.
+    -->
+    <Style Selector="ctl|TriggerSwitch">
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Template">
+            <ControlTemplate TargetType="ctl:TriggerSwitch">
+                <Grid Background="Transparent" ColumnDefinitions="Auto,4,Auto" VerticalAlignment="Center">
+                    <TextBlock Grid.Column="0"
+                               Text="{TemplateBinding Caption}"
+                               Foreground="{DynamicResource DstFg}"
+                               FontFamily="Arial"
+                               FontSize="12"
+                               VerticalAlignment="Center" />
+                    <Canvas Grid.Column="2"
+                            Width="22" Height="14"
+                            VerticalAlignment="Center">
+                        <!-- Unchecked: square 12x12 left, line 7x3 directly to its right -->
+                        <Rectangle x:Name="SquareOff"
+                                   Canvas.Left="0" Canvas.Top="1"
+                                   Width="12" Height="12"
+                                   Fill="#FF787878" />
+                        <Rectangle x:Name="LineOff"
+                                   Canvas.Left="12" Canvas.Top="5"
+                                   Width="7" Height="3"
+                                   Fill="#FFA02828" />
+                        <!-- Checked: line 9x3 left, square 12x12 directly to its right -->
+                        <Rectangle x:Name="LineOn"
+                                   Canvas.Left="0" Canvas.Top="5"
+                                   Width="9" Height="3"
+                                   Fill="#FF2ECC71"
+                                   IsVisible="False" />
+                        <Rectangle x:Name="SquareOn"
+                                   Canvas.Left="9" Canvas.Top="1"
+                                   Width="12" Height="12"
+                                   Fill="#FF787878"
+                                   IsVisible="False" />
+                    </Canvas>
+                </Grid>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+
+    <Style Selector="ctl|TriggerSwitch:checked /template/ Rectangle#SquareOff">
+        <Setter Property="IsVisible" Value="False" />
+    </Style>
+    <Style Selector="ctl|TriggerSwitch:checked /template/ Rectangle#LineOff">
+        <Setter Property="IsVisible" Value="False" />
+    </Style>
+    <Style Selector="ctl|TriggerSwitch:checked /template/ Rectangle#LineOn">
+        <Setter Property="IsVisible" Value="True" />
+    </Style>
+    <Style Selector="ctl|TriggerSwitch:checked /template/ Rectangle#SquareOn">
+        <Setter Property="IsVisible" Value="True" />
+    </Style>
+</Styles>

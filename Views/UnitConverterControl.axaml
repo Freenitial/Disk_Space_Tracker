@@ -1,0 +1,25 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DiskSpaceTracker.ViewModels"
+             x:Class="DiskSpaceTracker.Views.UnitConverterControl"
+             x:DataType="vm:UnitConverterViewModel"
+             x:CompileBindings="True">
+
+    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="6" RowSpacing="6">
+        <TextBox Grid.Row="0" Grid.Column="0"
+                 Text="{Binding Left, Mode=TwoWay}"
+                 GotFocus="OnLeftFocus" />
+        <ComboBox Grid.Row="0" Grid.Column="1"
+                  ItemsSource="{Binding Units}"
+                  SelectedItem="{Binding LeftUnit, Mode=TwoWay}"
+                  MinWidth="64" />
+
+        <TextBox Grid.Row="1" Grid.Column="0"
+                 Text="{Binding Right, Mode=TwoWay}"
+                 GotFocus="OnRightFocus" />
+        <ComboBox Grid.Row="1" Grid.Column="1"
+                  ItemsSource="{Binding Units}"
+                  SelectedItem="{Binding RightUnit, Mode=TwoWay}"
+                  MinWidth="64" />
+    </Grid>
+</UserControl>

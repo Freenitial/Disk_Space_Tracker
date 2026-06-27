@@ -1,0 +1,432 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Styles.Resources>
+        <ResourceDictionary>
+            <!--
+              Dark theme palette:
+                background #1E1E1E, foreground #F0F0F0,
+                accent #0078D7, button #3C3C3C,
+                plus status colors and the auto-tab muted text shade #EBDEBF.
+            -->
+            <Color x:Key="DstBgColor">#FF1E1E1E</Color>
+            <Color x:Key="DstFgColor">#FFF0F0F0</Color>
+            <Color x:Key="DstAccentColor">#FF0078D7</Color>
+            <!-- Lighter blue used for all hover states (buttons, checkbox/radio borders).
+                 It is distinct from DstAccent so the border stays visible when the inner
+                 area lights up. -->
+            <Color x:Key="DstAccentLightColor">#FF3FA1F5</Color>
+            <Color x:Key="DstButtonColor">#FF3C3C3C</Color>
+            <Color x:Key="DstBorderColor">#FF505050</Color>
+            <Color x:Key="DstAutoMutedColor">#FFEBDEBF</Color>
+            <Color x:Key="DstStartedColor">#FF2ECC71</Color>
+            <Color x:Key="DstPausedColor">#FFF1C40F</Color>
+            <Color x:Key="DstResetColor">#FFBEBEBE</Color>
+            <Color x:Key="DstTabHeaderColor">#FF26262A</Color>
+
+            <SolidColorBrush x:Key="DstBg" Color="{StaticResource DstBgColor}" />
+            <SolidColorBrush x:Key="DstFg" Color="{StaticResource DstFgColor}" />
+            <SolidColorBrush x:Key="DstAccent" Color="{StaticResource DstAccentColor}" />
+            <SolidColorBrush x:Key="DstAccentLight" Color="{StaticResource DstAccentLightColor}" />
+            <SolidColorBrush x:Key="DstButton" Color="{StaticResource DstButtonColor}" />
+            <SolidColorBrush x:Key="DstBorder" Color="{StaticResource DstBorderColor}" />
+            <SolidColorBrush x:Key="DstAutoMuted" Color="{StaticResource DstAutoMutedColor}" />
+            <SolidColorBrush x:Key="DstStarted" Color="{StaticResource DstStartedColor}" />
+            <SolidColorBrush x:Key="DstPaused" Color="{StaticResource DstPausedColor}" />
+            <SolidColorBrush x:Key="DstReset" Color="{StaticResource DstResetColor}" />
+            <SolidColorBrush x:Key="DstTabHeader" Color="{StaticResource DstTabHeaderColor}" />
+        </ResourceDictionary>
+    </Styles.Resources>
+
+    <!--
+      ============== Buttons (custom template) ==============
+      The Fluent default Button changes the inner ContentPresenter's background on hover,
+      which makes it look like the border "shrinks" because the ContentPresenter sits
+      inside the BorderThickness. This template uses a single Border that fills the
+      whole control area; on hover only that Border's Background changes — no shrink.
+    -->
+    <Style Selector="Button">
+        <Setter Property="Background" Value="{StaticResource DstButton}" />
+        <Setter Property="Foreground" Value="{StaticResource DstFg}" />
+        <Setter Property="BorderBrush" Value="{StaticResource DstAccent}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="0" />
+        <Setter Property="Padding" Value="2,1" />
+        <Setter Property="MinWidth" Value="0" />
+        <Setter Property="MinHeight" Value="0" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="FontFamily" Value="Arial" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <ControlTemplate TargetType="Button">
+                <Border x:Name="Bg"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{TemplateBinding CornerRadius}">
+                    <ContentPresenter x:Name="Content"
+                                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                      Content="{TemplateBinding Content}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                      Foreground="{TemplateBinding Foreground}"
+                                      Padding="{TemplateBinding Padding}" />
+                </Border>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    <!-- Hover uses the lighter blue so the DstAccent border stays distinct (the border does
+         not visually disappear into the hover fill). Pressed uses the regular accent. -->
+    <Style Selector="Button:pointerover /template/ Border#Bg">
+        <Setter Property="Background" Value="{StaticResource DstAccentLight}" />
+    </Style>
+    <Style Selector="Button:pressed /template/ Border#Bg">
+        <Setter Property="Background" Value="{StaticResource DstAccent}" />
+    </Style>
+
+    <!--
+      ============== TextBox (no hover/focus color change) ==============
+      The Fluent default switches the chrome on hover/focus. Both visual states are pinned
+      back to the resting palette so the user never sees a color change.
+    -->
+    <Style Selector="TextBox">
+        <Setter Property="Background" Value="{StaticResource DstBg}" />
+        <Setter Property="Foreground" Value="{StaticResource DstFg}" />
+        <Setter Property="BorderBrush" Value="{StaticResource DstBorder}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="0" />
+        <Setter Property="Padding" Value="2,1" />
+        <Setter Property="MinWidth" Value="0" />
+        <Setter Property="MinHeight" Value="0" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="FontFamily" Value="Arial" />
+        <Setter Property="FontSize" Value="12" />
+    </Style>
+    <Style Selector="TextBox:pointerover">
+        <Setter Property="Background" Value="{StaticResource DstBg}" />
+        <Setter Property="BorderBrush" Value="{StaticResource DstBorder}" />
+    </Style>
+    <Style Selector="TextBox:focus">
+        <Setter Property="Background" Value="{StaticResource DstBg}" />
+        <Setter Property="BorderBrush" Value="{StaticResource DstBorder}" />
+    </Style>
+    <Style Selector="TextBox:pointerover /template/ Border">
+        <Setter Property="Background" Value="{StaticResource DstBg}" />
+        <Setter Property="BorderBrush" Value="{StaticResource DstBorder}" />
+    </Style>
+    <Style Selector="TextBox:focus /template/ Border">
+        <Setter Property="Background" Value="{StaticResource DstBg}" />
+        <Setter Property="BorderBrush" Value="{StaticResource DstBorder}" />
+    </Style>
+    <!--
+      Read-only TextBoxes still gain focus so their content remains selectable and copyable,
+      but the blinking caret is hidden because the user cannot type into them — a blinking
+      cursor would be misleading.
+    -->
+    <Style Selector="TextBox[IsReadOnly=True]">
+        <Setter Property="CaretBrush" Value="Transparent" />
+    </Style>
+
+    <!-- ============== TextBlock ============== -->
+    <Style Selector="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource DstFg}" />
+        <Setter Property="FontFamily" Value="Arial" />
+        <Setter Property="FontSize" Value="12" />
+    </Style>
+
+    <!--
+      ============== CheckBox + RadioButton (custom templates) ==============
+      The Fluent default templates render a ~24px indicator with significant padding.
+      These templates use a minimal layout: a 13×13 indicator on the left and content on
+      the right, which makes the size predictable across themes and versions.
+    -->
+    <Style Selector="CheckBox">
+        <Setter Property="Foreground" Value="{StaticResource DstFg}" />
+        <Setter Property="Background" Value="Transparent" />
+        <!-- Default border is DstAccent (blue): no white frames in dark mode. -->
+        <Setter Property="BorderBrush" Value="{StaticResource DstAccent}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="MinHeight" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="FontFamily" Value="Arial" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <ControlTemplate TargetType="CheckBox">
+                <Grid Background="Transparent" ColumnDefinitions="Auto,Auto" VerticalAlignment="Center">
+                    <Border Grid.Column="0"
+                            x:Name="Box"
+                            Width="13" Height="13"
+                            Background="Transparent"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            VerticalAlignment="Center">
+                        <!-- Tick stroke is DstAccent (blue check on a transparent box). -->
+                        <Path x:Name="Tick"
+                              Stretch="Uniform"
+                              Margin="1"
+                              Stroke="{StaticResource DstAccent}"
+                              StrokeThickness="1.5"
+                              StrokeLineCap="Square"
+                              Data="M 0,4 L 4,8 L 10,0"
+                              IsVisible="False" />
+                    </Border>
+                    <!--
+                      Use a TextBlock directly (not a ContentPresenter) so the inline
+                      Foreground attribute on the CheckBox propagates correctly to the label.
+                      A ContentPresenter does not always pass Foreground to the auto-generated
+                      TextBlock it wraps string content in (Avalonia 12 quirk).
+                    -->
+                    <TextBlock Grid.Column="1"
+                               Margin="3,0,0,0"
+                               VerticalAlignment="Center"
+                               Text="{TemplateBinding Content}"
+                               Foreground="{TemplateBinding Foreground}"
+                               FontFamily="{TemplateBinding FontFamily}"
+                               FontSize="{TemplateBinding FontSize}" />
+                </Grid>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    <Style Selector="CheckBox:checked /template/ Path#Tick">
+        <Setter Property="IsVisible" Value="True" />
+    </Style>
+    <!-- Hover lightens the border to DstAccentLight; the checked tick stays DstAccent. -->
+    <Style Selector="CheckBox:pointerover /template/ Border#Box">
+        <Setter Property="BorderBrush" Value="{StaticResource DstAccentLight}" />
+    </Style>
+    <Style Selector="CheckBox:pointerover /template/ Path#Tick">
+        <Setter Property="Stroke" Value="{StaticResource DstAccentLight}" />
+    </Style>
+
+    <Style Selector="RadioButton">
+        <Setter Property="Foreground" Value="{StaticResource DstFg}" />
+        <Setter Property="Background" Value="Transparent" />
+        <!-- Default border is DstAccent (blue). -->
+        <Setter Property="BorderBrush" Value="{StaticResource DstAccent}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="MinHeight" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="FontFamily" Value="Arial" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <ControlTemplate TargetType="RadioButton">
+                <Grid Background="Transparent" ColumnDefinitions="Auto,Auto" VerticalAlignment="Center">
+                    <!--
+                      Sizes 12+4 (both even) so both ellipses share the SAME pixel center
+                      after layout rounding. Mixed parities (e.g. 13+6 / 13+5) produce a
+                      sub-pixel center on one of them which renders as a 1px down-right shift.
+                    -->
+                    <Grid Grid.Column="0"
+                          Width="12" Height="12"
+                          VerticalAlignment="Center"
+                          UseLayoutRounding="True">
+                        <Ellipse x:Name="Outer"
+                                 Width="12" Height="12"
+                                 HorizontalAlignment="Center"
+                                 VerticalAlignment="Center"
+                                 Stroke="{TemplateBinding BorderBrush}"
+                                 StrokeThickness="1"
+                                 Fill="Transparent" />
+                        <!-- Inner dot is DstAccent (blue). -->
+                        <Ellipse x:Name="Dot"
+                                 Width="4" Height="4"
+                                 HorizontalAlignment="Center"
+                                 VerticalAlignment="Center"
+                                 Fill="{StaticResource DstAccent}"
+                                 IsVisible="False" />
+                    </Grid>
+                    <!-- Same TextBlock approach as the CheckBox template. -->
+                    <TextBlock Grid.Column="1"
+                               Margin="2,0,0,0"
+                               VerticalAlignment="Center"
+                               Text="{TemplateBinding Content}"
+                               Foreground="{TemplateBinding Foreground}"
+                               FontFamily="{TemplateBinding FontFamily}"
+                               FontSize="{TemplateBinding FontSize}" />
+                </Grid>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    <Style Selector="RadioButton:checked /template/ Ellipse#Dot">
+        <Setter Property="IsVisible" Value="True" />
+    </Style>
+    <!-- Hover lightens the outer ring + dot to DstAccentLight. -->
+    <Style Selector="RadioButton:pointerover /template/ Ellipse#Outer">
+        <Setter Property="Stroke" Value="{StaticResource DstAccentLight}" />
+    </Style>
+    <Style Selector="RadioButton:pointerover /template/ Ellipse#Dot">
+        <Setter Property="Fill" Value="{StaticResource DstAccentLight}" />
+    </Style>
+
+    <!--
+      ============== ComboBox (custom template) ==============
+      Compact dropdown: a content area on the left, a small triangle glyph on the right,
+      opening a Popup with a ListBox. Avoids the Fluent default's large chevron and
+      reserved padding.
+    -->
+    <Style Selector="ComboBox">
+        <Setter Property="Background" Value="{StaticResource DstButton}" />
+        <Setter Property="Foreground" Value="{StaticResource DstFg}" />
+        <Setter Property="BorderBrush" Value="{StaticResource DstBorder}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="0" />
+        <Setter Property="MinHeight" Value="0" />
+        <Setter Property="Padding" Value="4,2,2,2" />
+        <Setter Property="FontFamily" Value="Arial" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Template">
+            <ControlTemplate TargetType="ComboBox">
+                <Grid>
+                    <Border x:Name="Bg"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}">
+                        <Grid ColumnDefinitions="*,12">
+                            <ContentControl Grid.Column="0"
+                                            x:Name="ContentPresenter"
+                                            Padding="{TemplateBinding Padding}"
+                                            HorizontalContentAlignment="Left"
+                                            VerticalContentAlignment="Center"
+                                            Content="{TemplateBinding SelectionBoxItem}"
+                                            ContentTemplate="{TemplateBinding ItemTemplate}" />
+                            <Path Grid.Column="1"
+                                  Width="7" Height="4"
+                                  Margin="0,0,3,0"
+                                  HorizontalAlignment="Right"
+                                  VerticalAlignment="Center"
+                                  Fill="{TemplateBinding Foreground}"
+                                  Data="M 0,0 L 7,0 L 3.5,4 Z" />
+                        </Grid>
+                    </Border>
+                    <Popup x:Name="PART_Popup"
+                           PlacementTarget="{TemplateBinding}"
+                           Placement="Bottom"
+                           IsOpen="{TemplateBinding IsDropDownOpen, Mode=TwoWay}"
+                           IsLightDismissEnabled="True"
+                           MinWidth="{Binding $parent[ComboBox].Bounds.Width}">
+                        <Border Background="{StaticResource DstBg}"
+                                BorderBrush="{StaticResource DstBorder}"
+                                BorderThickness="1">
+                            <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" MaxHeight="240">
+                                <ItemsPresenter x:Name="PART_ItemsPresenter"
+                                                ItemsPanel="{TemplateBinding ItemsPanel}" />
+                            </ScrollViewer>
+                        </Border>
+                    </Popup>
+                </Grid>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    <Style Selector="ComboBoxItem">
+        <Setter Property="MinHeight" Value="20" />
+        <Setter Property="Padding" Value="6,2" />
+        <Setter Property="Background" Value="{StaticResource DstBg}" />
+        <Setter Property="Foreground" Value="{StaticResource DstFg}" />
+        <Setter Property="FontFamily" Value="Arial" />
+        <Setter Property="FontSize" Value="12" />
+    </Style>
+    <Style Selector="ComboBoxItem:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="#FF373738" />
+    </Style>
+    <Style Selector="ComboBoxItem:selected /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource DstAccent}" />
+        <Setter Property="Foreground" Value="{StaticResource DstFg}" />
+    </Style>
+
+    <!-- ============== TabControl/TabItem (compact tab strip, no inner padding) ============== -->
+    <Style Selector="TabControl">
+        <Setter Property="Background" Value="{StaticResource DstBg}" />
+        <Setter Property="BorderBrush" Value="{StaticResource DstBorder}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <!-- Padding=0 so the inner Canvas (515 wide) fits inside a 517 wide TabControl
+             with only the 1+1 px border on each side. -->
+        <Setter Property="Padding" Value="0" />
+    </Style>
+    <Style Selector="TabItem">
+        <Setter Property="Background" Value="{StaticResource DstTabHeader}" />
+        <Setter Property="Foreground" Value="#FFBEBEBE" />
+        <Setter Property="Padding" Value="9,2" />
+        <Setter Property="MinHeight" Value="22" />
+        <Setter Property="Height" Value="22" />
+        <Setter Property="FontFamily" Value="Arial" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Margin" Value="0" />
+    </Style>
+    <Style Selector="TabItem:selected">
+        <Setter Property="Background" Value="{StaticResource DstBg}" />
+        <Setter Property="Foreground" Value="{StaticResource DstFg}" />
+    </Style>
+
+    <!-- The LogsSidebar uses a ListBox with a Grid item template rather than a DataGrid
+         (the Avalonia.Controls.DataGrid package is not AOT-compatible). -->
+
+    <!-- ============== GroupBox-like Border (used in Auto tabs) ============== -->
+    <Style Selector="Border.groupSurface">
+        <Setter Property="Background" Value="{StaticResource DstBg}" />
+        <Setter Property="BorderBrush" Value="{StaticResource DstBorder}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="0" />
+        <Setter Property="Padding" Value="4" />
+    </Style>
+
+    <!--
+      ============== Title-bar buttons (min, X) ==============
+      Transparent background so the title bar gradient (gray→blue) shines through. Hover
+      and pressed use semi-transparent overlays so the visual feedback works uniformly on
+      both ends of the gradient (gray side and blue side).
+    -->
+    <Style Selector="Button.titleBarButton">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{StaticResource DstFg}" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="0" />
+        <Setter Property="FontFamily" Value="Arial" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Padding" Value="0" />
+    </Style>
+    <!-- 25% white overlay on hover (subtle lightening, works on gray AND blue). -->
+    <Style Selector="Button.titleBarButton:pointerover /template/ Border#Bg">
+        <Setter Property="Background" Value="#40FFFFFF" />
+    </Style>
+    <!-- 40% black overlay on pressed (clear darken). -->
+    <Style Selector="Button.titleBarButton:pressed /template/ Border#Bg">
+        <Setter Property="Background" Value="#66000000" />
+    </Style>
+
+    <!-- ============== Hover-only X glyph in preset list ============== -->
+    <Style Selector="Button.deleteGlyph">
+        <Setter Property="Opacity" Value="0" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Foreground" Value="{StaticResource DstFg}" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.1" />
+            </Transitions>
+        </Setter>
+    </Style>
+    <Style Selector="Grid.presetRow:pointerover Button.deleteGlyph">
+        <Setter Property="Opacity" Value="1" />
+    </Style>
+    <Style Selector="Button.deleteGlyph:pointerover">
+        <Setter Property="Foreground" Value="#FFE74C3C" />
+    </Style>
+</Styles>

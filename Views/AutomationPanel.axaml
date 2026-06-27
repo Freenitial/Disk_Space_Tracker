@@ -1,0 +1,64 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DiskSpaceTracker.ViewModels"
+             xmlns:v="using:DiskSpaceTracker.Views"
+             xmlns:ctl="using:DiskSpaceTracker.Controls"
+             x:Class="DiskSpaceTracker.Views.AutomationPanel"
+             x:DataType="vm:AutomationPanelViewModel"
+             x:CompileBindings="True"
+             Width="535"
+             Height="255">
+
+    <!--
+      Layout:
+        - Header strip at the top (y=10..30) with: 'Auto-Trigger:' label, 4 TriggerSwitch toggles,
+          a 'Logs' button on the right edge, and a 'Presets' dropdown at top-right of the tabs.
+        - TabControl below at (9, 38).
+    -->
+    <Canvas Background="{DynamicResource DstBg}">
+        <TextBlock Canvas.Left="10" Canvas.Top="12" Width="97" Height="20"
+                   Text="Auto-Trigger :"
+                   FontFamily="Arial" FontSize="13" FontWeight="Bold" />
+
+        <!-- The 4 trigger switches: Start, Pause, Resume, Reset -->
+        <ctl:TriggerSwitch Canvas.Left="120" Canvas.Top="11" Width="65" Height="20"
+                           Caption="Start"
+                           IsChecked="{Binding StartTab.IsActive, Mode=TwoWay}" />
+        <ctl:TriggerSwitch Canvas.Left="195" Canvas.Top="11" Width="70" Height="20"
+                           Caption="Pause"
+                           IsChecked="{Binding PauseTab.IsActive, Mode=TwoWay}" />
+        <ctl:TriggerSwitch Canvas.Left="279" Canvas.Top="11" Width="78" Height="20"
+                           Caption="Resume"
+                           IsChecked="{Binding ResumeTab.IsActive, Mode=TwoWay}" />
+        <ctl:TriggerSwitch Canvas.Left="374" Canvas.Top="11" Width="70" Height="20"
+                           Caption="Reset"
+                           IsChecked="{Binding ResetTab.IsActive, Mode=TwoWay}" />
+
+        <!-- 'Logs' toggle button -->
+        <Button Canvas.Left="464" Canvas.Top="11" Width="58" Height="20"
+                Content="{Binding Logs.IsVisible, Converter={StaticResource LogsArrowConverter}}"
+                Command="{Binding Logs.ToggleCommand}" />
+
+        <!-- 'Presets' dropdown (rendered via DataTemplate -> PresetMenuButton) -->
+        <ContentControl Canvas.Left="425" Canvas.Top="40" Width="100" Height="20"
+                        Content="{Binding Presets}" />
+
+        <!--
+          TabControl height = 205 (= tab strip ~22 + 2 border + 179 content area + 2 buffer).
+          12px of outer padding remains BELOW the TabControl (255 - 38 header - 205 = 12).
+        -->
+        <TabControl Canvas.Left="9" Canvas.Top="38" Width="517" Height="205"
+                    ItemsSource="{Binding Tabs}">
+            <TabControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:AutomationTabViewModel">
+                    <TextBlock Text="{Binding Header}" />
+                </DataTemplate>
+            </TabControl.ItemTemplate>
+            <TabControl.ContentTemplate>
+                <DataTemplate x:DataType="vm:AutomationTabViewModel">
+                    <v:AutomationTabContent />
+                </DataTemplate>
+            </TabControl.ContentTemplate>
+        </TabControl>
+    </Canvas>
+</UserControl>

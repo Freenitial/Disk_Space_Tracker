@@ -1,0 +1,129 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net11.0-windows10.0.17763.0</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <Platforms>AnyCPU;x64</Platforms>
+
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>DiskSpaceTracker</RootNamespace>
+    <AssemblyName>DiskSpaceTracker</AssemblyName>
+    <!-- Multi-resolution ICO embedded in the .exe → shown by Windows Explorer / shortcuts. -->
+    <ApplicationIcon>Assets/logo.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+
+    <UseWindowsForms>false</UseWindowsForms>
+    <UseWPF>false</UseWPF>
+
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsNotAsErrors>NU1701</WarningsNotAsErrors>
+    <NoWarn>NETSDK1206</NoWarn>
+
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+
+    <!-- Improve AOT compatibility analysis -->
+    <IsAotCompatible>true</IsAotCompatible>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+
+    <!-- Required by [LibraryImport] source generator (PDH P/Invoke). -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <PublishAot>true</PublishAot>
+    <PublishSingleFile Condition="'$(PublishAot)' != 'true'">true</PublishSingleFile>
+    <!-- InvariantGlobalization stays off because Avalonia/Skia rely on ICU for text shaping. -->
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <StripSymbols>true</StripSymbols>
+    <TrimMode>full</TrimMode>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <OptimizationPreference>Size</OptimizationPreference>
+    <IlcOptimizationPreference>Size</IlcOptimizationPreference>
+    <IlcGenerateStackTraceData>false</IlcGenerateStackTraceData>
+    <IlcDisableReflection>false</IlcDisableReflection>
+
+    <!-- True single-file static link: roll Skia/HarfBuzz .lib into the .exe via link.exe. -->
+    <BuiltInComInteropSupport>false</BuiltInComInteropSupport>
+    <StaticExecutable>true</StaticExecutable>
+  </PropertyGroup>
+
+  <!-- Static linking of Skia + HarfBuzz for true single-file NativeAOT publish.
+       The 2ndLAB.SkiaSharp.Static package provides skia.lib + SkiaSharp.lib + libHarfBuzzSharp.lib
+       and wires them up as <NativeLibrary> via its buildTransitive targets. We add the
+       <DirectPInvoke> entries here so the AOT compiler emits direct calls instead of
+       DllImport lookups, and the system .lib references the linker needs. -->
+  <ItemGroup Condition="'$(PublishAot)' == 'true' AND '$(RuntimeIdentifier)' == 'win-x64'">
+    <DirectPInvoke Include="libHarfBuzzSharp" />
+    <DirectPInvoke Include="libSkiaSharp" />
+    <LinkerArg Include="Gdi32.lib;User32.lib" />
+    <LinkerArg Include="Ole32.lib" />
+    <LinkerArg Include="fontsub.lib;USP10.lib" />
+    <!-- LTCG up-front: libHarfBuzzSharp objects are /GL-compiled, so the linker will
+         restart with /LTCG anyway. Passing it explicitly skips the restart. -->
+    <LinkerArg Include="/LTCG" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="Avalonia.Fonts.Inter" />
+
+    <!-- Static .lib for Skia + HarfBuzz (no .dll at runtime). -->
+    <PackageReference Include="2ndLAB.SkiaSharp.Static" />
+    <!-- Avalonia.Controls.DataGrid removed: not AOT-clean. The LogsSidebar uses a plain
+         ListBox + Grid item template instead, so we don't need it. -->
+
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Debug" />
+  </ItemGroup>
+
+  <!--
+    Note: Avalonia.Diagnostics has no 12.x release yet. Keep it commented; once a 12.x
+    publishes, restore the conditional reference for Debug builds.
+  -->
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets/**" />
+  </ItemGroup>
+
+  <!-- The unit-test project lives in Tests/ under this directory; keep its sources out of the
+       app's implicit compile glob so the app and tests build independently. -->
+  <ItemGroup>
+    <Compile Remove="Tests/**/*.cs" />
+  </ItemGroup>
+
+  <!--
+    Native NuGet packages ship a few asset categories we don't want in the publish folder:
+      • *.pdb       : ~100 MB of native debug symbols, useless for end users.
+      • *.lib       : link-time only artifacts from 2ndLAB.SkiaSharp.Static (Skia/HarfBuzz
+                      static libs already linked into the .exe).
+      • libSkiaSharp.dll / libHarfBuzzSharp.dll : dynamic copies pulled in transitively by
+                      Avalonia.Skia. Redundant — we link them statically via the .lib.
+      • av_libglesv2.dll : ANGLE EGL backend. We render via WGL (native opengl32.dll), so
+                      this DLL is never loaded. Dropping it is the whole point of WGL.
+    Purge them all post-publish so the output stays a true single-file .exe.
+  -->
+  <Target Name="StripRedundantNativeAssetsFromPublish" AfterTargets="Publish">
+    <ItemGroup>
+      <_NativeAssetToDelete Include="$(PublishDir)*.pdb" />
+      <_NativeAssetToDelete Include="$(PublishDir)*.lib" />
+      <_NativeAssetToDelete Include="$(PublishDir)libSkiaSharp.dll" />
+      <_NativeAssetToDelete Include="$(PublishDir)libHarfBuzzSharp.dll" />
+      <_NativeAssetToDelete Include="$(PublishDir)av_libglesv2.dll" />
+    </ItemGroup>
+    <Delete Files="@(_NativeAssetToDelete)" />
+  </Target>
+
+</Project>

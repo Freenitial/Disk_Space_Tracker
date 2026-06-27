@@ -1,0 +1,189 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DiskSpaceTracker.ViewModels"
+             xmlns:cv="using:DiskSpaceTracker.Converters"
+             x:Class="DiskSpaceTracker.Views.AutomationTabContent"
+             x:DataType="vm:AutomationTabViewModel"
+             x:CompileBindings="True"
+             HorizontalAlignment="Left"
+             VerticalAlignment="Top"
+             Width="515"
+             Height="179"
+             Background="{DynamicResource DstBg}">
+
+    <!--
+      Layout: left rail (0..80) for Conditions/After groups, then an 8px gap, then the
+      right column starting at x=88. The extra horizontal room is added to the stretched
+      TextBoxes. Right edges stay anchored: Browse / Countdown / Data at x=510, file-path
+      TextBoxes at x=451.
+    -->
+    <!-- Canvas height = last row bottom (y=174 = radios at y=154 + Height 20) + 5px inner padding. -->
+    <Canvas Width="515" Height="179">
+        <!-- ============ LEFT RAIL ============ -->
+        <Border Canvas.Left="0" Canvas.Top="2" Width="80" Height="54" Classes="groupSurface">
+            <StackPanel Spacing="2">
+                <TextBlock Text="Conditions:" FontFamily="Arial" FontSize="11" FontWeight="Bold" />
+                <RadioButton Content="All (and)"
+                             GroupName="AllAnyGroup"
+                             IsChecked="{Binding AllConditions, Mode=TwoWay}" />
+                <RadioButton Content="Any (or)"
+                             GroupName="AllAnyGroup"
+                             IsChecked="{Binding !AllConditions, Mode=OneWay}" />
+            </StackPanel>
+        </Border>
+
+        <Border Canvas.Left="0" Canvas.Top="60" Width="80" Height="70" Classes="groupSurface">
+            <StackPanel Spacing="2">
+                <TextBlock Text="After:" FontFamily="Arial" FontSize="11" FontWeight="Bold" />
+                <CheckBox Content="Loop"   IsChecked="{Binding AfterActions.Loop}" />
+                <CheckBox Content="Bip"    IsChecked="{Binding AfterActions.Bip}" />
+                <CheckBox Content="Restart"
+                          IsChecked="{Binding AfterActions.Restart}"
+                          IsVisible="{Binding AfterActions.ShowRestart}" />
+            </StackPanel>
+        </Border>
+
+        <!-- ============ ROW 0 (y=1) — WaitTime ============ -->
+        <CheckBox Canvas.Left="88"  Canvas.Top="1"   Width="185" Height="20"
+                  Content="Wait time"
+                  IsChecked="{Binding Conditions.WaitTime.IsEnabled}" />
+        <TextBox  Canvas.Left="278" Canvas.Top="1"   Width="173" Height="20"
+                  PlaceholderText="HH:MM:SS"
+                  Text="{Binding Conditions.WaitTime.Time, Mode=TwoWay}" />
+        <TextBox  Canvas.Left="450" Canvas.Top="1"   Width="60"  Height="20"
+                  IsReadOnly="True"
+                  TextAlignment="Center"
+                  Text="{Binding Conditions.WaitTime.Countdown}" />
+
+        <!-- ============ ROW 1 (y=20) — Execute ============ -->
+        <CheckBox Canvas.Left="88"  Canvas.Top="20"  Width="185" Height="20"
+                  Content="Execute, then wait closing"
+                  IsChecked="{Binding Conditions.Execute.IsEnabled}" />
+        <TextBox  Canvas.Left="278" Canvas.Top="20"  Width="173" Height="20"
+                  Text="{Binding Conditions.Execute.Path, Mode=TwoWay}" />
+        <Button   Canvas.Left="450" Canvas.Top="20"  Width="60"  Height="20"
+                  Content="Browse"
+                  Command="{Binding Conditions.Execute.BrowseCommand}" />
+
+        <!-- ============ ROW 2 (y=39) — FileExist ============ -->
+        <CheckBox Canvas.Left="88"  Canvas.Top="39"  Width="108" Height="20"
+                  Content="File exist"
+                  IsChecked="{Binding Conditions.FileExist.IsEnabled}" />
+        <RadioButton Canvas.Left="196" Canvas.Top="39" Width="40" Height="20"
+                     GroupName="FileExistGroup" Content="✓"
+                     IsChecked="{Binding Conditions.FileExist.ShouldExist, Mode=TwoWay}" />
+        <RadioButton Canvas.Left="236" Canvas.Top="39" Width="40" Height="20"
+                     GroupName="FileExistGroup" Content="✗"
+                     IsChecked="{Binding !Conditions.FileExist.ShouldExist, Mode=OneWay}" />
+        <TextBox  Canvas.Left="278" Canvas.Top="39"  Width="173" Height="20"
+                  Text="{Binding Conditions.FileExist.Path, Mode=TwoWay}" />
+        <Button   Canvas.Left="450" Canvas.Top="39"  Width="60"  Height="20"
+                  Content="Browse"
+                  Command="{Binding Conditions.FileExist.BrowseCommand}" />
+
+        <!-- ============ ROW 3 (y=58) — FileLocked ============ -->
+        <CheckBox Canvas.Left="88"  Canvas.Top="58"  Width="108" Height="20"
+                  Content="File locked"
+                  IsChecked="{Binding Conditions.FileLocked.IsEnabled}" />
+        <RadioButton Canvas.Left="196" Canvas.Top="58" Width="40" Height="20"
+                     GroupName="FileLockedGroup" Content="✓"
+                     IsChecked="{Binding Conditions.FileLocked.ShouldBeUsed, Mode=TwoWay}" />
+        <RadioButton Canvas.Left="236" Canvas.Top="58" Width="40" Height="20"
+                     GroupName="FileLockedGroup" Content="✗"
+                     IsChecked="{Binding !Conditions.FileLocked.ShouldBeUsed, Mode=OneWay}" />
+        <TextBox  Canvas.Left="278" Canvas.Top="58"  Width="173" Height="20"
+                  Text="{Binding Conditions.FileLocked.Path, Mode=TwoWay}" />
+        <Button   Canvas.Left="450" Canvas.Top="58"  Width="60"  Height="20"
+                  Content="Browse"
+                  Command="{Binding Conditions.FileLocked.BrowseCommand}" />
+
+        <!-- ============ ROW 4 (y=77) — ProcessExist ============ -->
+        <CheckBox Canvas.Left="88"  Canvas.Top="77"  Width="108" Height="20"
+                  Content="Process exist"
+                  IsChecked="{Binding Conditions.ProcessExist.IsEnabled}" />
+        <RadioButton Canvas.Left="196" Canvas.Top="77" Width="40" Height="20"
+                     GroupName="ProcessExistGroup" Content="✓"
+                     IsChecked="{Binding Conditions.ProcessExist.ShouldExist, Mode=TwoWay}" />
+        <RadioButton Canvas.Left="236" Canvas.Top="77" Width="40" Height="20"
+                     GroupName="ProcessExistGroup" Content="✗"
+                     IsChecked="{Binding !Conditions.ProcessExist.ShouldExist, Mode=OneWay}" />
+        <TextBox  Canvas.Left="278" Canvas.Top="77"  Width="173" Height="20"
+                  Text="{Binding Conditions.ProcessExist.Name, Mode=TwoWay}" />
+        <Button   Canvas.Left="450" Canvas.Top="77"  Width="60"  Height="20"
+                  Content="Browse"
+                  Command="{Binding Conditions.ProcessExist.BrowseCommand}" />
+
+        <!-- ============ ROW 5 (y=96) — RegEntry (Key/Value/Data) ============ -->
+        <CheckBox Canvas.Left="88"  Canvas.Top="96"  Width="108" Height="20"
+                  Content="Registry entry"
+                  IsChecked="{Binding Conditions.Registry.IsEnabled}" />
+        <RadioButton Canvas.Left="196" Canvas.Top="96" Width="40" Height="20"
+                     GroupName="RegistryGroup" Content="✓"
+                     IsChecked="{Binding Conditions.Registry.ShouldExist, Mode=TwoWay}" />
+        <RadioButton Canvas.Left="236" Canvas.Top="96" Width="40" Height="20"
+                     GroupName="RegistryGroup" Content="✗"
+                     IsChecked="{Binding !Conditions.Registry.ShouldExist, Mode=OneWay}" />
+        <!-- Key takes the extra width; Value and Data stay at their fixed positions. -->
+        <TextBox  Canvas.Left="278" Canvas.Top="96"  Width="108" Height="20"
+                  PlaceholderText="Key"
+                  Text="{Binding Conditions.Registry.Key, Mode=TwoWay}" />
+        <TextBox  Canvas.Left="385" Canvas.Top="96"  Width="66"  Height="20"
+                  PlaceholderText="Value"
+                  Text="{Binding Conditions.Registry.Value, Mode=TwoWay}" />
+        <TextBox  Canvas.Left="450" Canvas.Top="96"  Width="60"  Height="20"
+                  PlaceholderText="Data"
+                  Text="{Binding Conditions.Registry.Data, Mode=TwoWay}" />
+
+        <!-- ============ ROW 6 (y=115) — TextFile (Analyze) ============ -->
+        <CheckBox Canvas.Left="88"  Canvas.Top="115" Width="121" Height="20"
+                  Content="Analyze text file"
+                  Foreground="{DynamicResource DstAutoMuted}"
+                  IsChecked="{Binding Conditions.TextFile.IsEnabled}" />
+        <TextBox  Canvas.Left="278" Canvas.Top="115" Width="173" Height="20"
+                  Text="{Binding Conditions.TextFile.Path, Mode=TwoWay}" />
+        <Button   Canvas.Left="450" Canvas.Top="115" Width="60"  Height="20"
+                  Content="Browse"
+                  Command="{Binding Conditions.TextFile.BrowseCommand}" />
+
+        <!-- ============ ROW 7 (y=134) — Line content ============ -->
+        <TextBlock Canvas.Left="105" Canvas.Top="135" Width="135" Height="20"
+                   Text="Line content to search :"
+                   Foreground="{DynamicResource DstAutoMuted}"
+                   VerticalAlignment="Center" />
+        <TextBox   Canvas.Left="278" Canvas.Top="134" Width="232" Height="20"
+                   Text="{Binding Conditions.TextFile.Content, Mode=TwoWay}" />
+
+        <!-- ============ ROW 8 (y=153) — At line n° + comparators ============ -->
+        <TextBlock Canvas.Left="105" Canvas.Top="155" Width="50" Height="20"
+                   Text="At line n°"
+                   Foreground="{DynamicResource DstAutoMuted}"
+                   VerticalAlignment="Center" />
+        <TextBox   Canvas.Left="155" Canvas.Top="153" Width="44" Height="18"
+                   PlaceholderText="(any)"
+                   Text="{Binding Conditions.TextFile.LineNumber, Mode=TwoWay}" />
+        <RadioButton Canvas.Left="213" Canvas.Top="154" Width="32" Height="20"
+                     GroupName="CmpGroup" Content="="
+                     Foreground="{DynamicResource DstAutoMuted}"
+                     IsChecked="{Binding Conditions.TextFile.Comparison, Mode=TwoWay, Converter={StaticResource ComparisonOperatorConverter}, ConverterParameter=Equal}" />
+        <RadioButton Canvas.Left="253" Canvas.Top="154" Width="40" Height="20"
+                     GroupName="CmpGroup" Content="!="
+                     Foreground="{DynamicResource DstAutoMuted}"
+                     IsChecked="{Binding Conditions.TextFile.Comparison, Mode=TwoWay, Converter={StaticResource ComparisonOperatorConverter}, ConverterParameter=NotEqual}" />
+        <RadioButton Canvas.Left="298" Canvas.Top="154" Width="34" Height="20"
+                     GroupName="CmpGroup" Content="*"
+                     Foreground="{DynamicResource DstAutoMuted}"
+                     IsChecked="{Binding Conditions.TextFile.Comparison, Mode=TwoWay, Converter={StaticResource ComparisonOperatorConverter}, ConverterParameter=Contains}" />
+        <RadioButton Canvas.Left="342" Canvas.Top="154" Width="44" Height="20"
+                     GroupName="CmpGroup" Content="!*"
+                     Foreground="{DynamicResource DstAutoMuted}"
+                     IsChecked="{Binding Conditions.TextFile.Comparison, Mode=TwoWay, Converter={StaticResource ComparisonOperatorConverter}, ConverterParameter=NotContains}" />
+        <RadioButton Canvas.Left="390" Canvas.Top="154" Width="54" Height="20"
+                     GroupName="CmpGroup" Content="Starts"
+                     Foreground="{DynamicResource DstAutoMuted}"
+                     IsChecked="{Binding Conditions.TextFile.Comparison, Mode=TwoWay, Converter={StaticResource ComparisonOperatorConverter}, ConverterParameter=StartsWith}" />
+        <RadioButton Canvas.Left="447" Canvas.Top="154" Width="60" Height="20"
+                     GroupName="CmpGroup" Content="Ends"
+                     Foreground="{DynamicResource DstAutoMuted}"
+                     IsChecked="{Binding Conditions.TextFile.Comparison, Mode=TwoWay, Converter={StaticResource ComparisonOperatorConverter}, ConverterParameter=EndsWith}" />
+    </Canvas>
+</UserControl>
