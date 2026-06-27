@@ -12,6 +12,7 @@
     <LangVersion>latest</LangVersion>
     <RootNamespace>DiskSpaceTracker</RootNamespace>
     <AssemblyName>DiskSpaceTracker</AssemblyName>
+    <Version>1.0.1</Version>
     <!-- Multi-resolution ICO embedded in the .exe → shown by Windows Explorer / shortcuts. -->
     <ApplicationIcon>Assets/logo.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
