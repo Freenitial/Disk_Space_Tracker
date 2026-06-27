@@ -76,7 +76,7 @@ Each **Trigger** below can be armed and validated by **All** or **Any** of its c
 
 No installation required — it is a single self-contained file (no .NET runtime needed).
 
-**➡️ [Download Disk_Space_Tracker.exe](https://github.com/Freenitial/Disk_Space_Tracker/releases/latest/download/Disk_Space_Tracker.exe)**
+**➡️ [Download Disk_Space_Tracker.exe](https://github.com/Freenitial/Disk_Space_Tracker/releases/latest/download/DiskSpaceTracker.exe)**
 
 Then just double-click to open.
 
