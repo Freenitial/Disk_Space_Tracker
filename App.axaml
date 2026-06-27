@@ -26,7 +26,7 @@
 
     <Application.Styles>
         <FluentTheme />
-        <StyleInclude Source="avares://DiskSpaceTracker/Styles/Theme.axaml" />
-        <StyleInclude Source="avares://DiskSpaceTracker/Styles/ControlStyles.axaml" />
+        <StyleInclude Source="avares://Disk_Space_Tracker/Styles/Theme.axaml" />
+        <StyleInclude Source="avares://Disk_Space_Tracker/Styles/ControlStyles.axaml" />
     </Application.Styles>
 </Application>

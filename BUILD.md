@@ -47,13 +47,13 @@ dotnet publish DiskSpaceTracker.csproj -c Release -r win-x64
 Output:
 
 ```
-bin\Release\net11.0-windows10.0.17763.0\win-x64\publish\DiskSpaceTracker.exe
+bin\Release\net11.0-windows10.0.17763.0\win-x64\publish\Disk_Space_Tracker.exe
 ```
 
 A standalone, single-file application (~27 MB) that needs no .NET runtime on the target machine.
 
-> The published file is named `DiskSpaceTracker.exe`. If you upload it as a GitHub release asset,
-> rename it to `Disk_Space_Tracker.exe` to match the download link used in the README.
+> The published file is `Disk_Space_Tracker.exe` — upload it directly as the GitHub release asset
+> (the README's download link points to this exact name).
 
 If the publish ever fails with `MSB3073` mentioning `vswhere.exe`, it means the MSVC environment was
 not on `PATH` — run the command from the Developer PowerShell as noted above. A transient `MSB3061`

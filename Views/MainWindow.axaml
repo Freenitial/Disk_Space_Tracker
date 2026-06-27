@@ -7,7 +7,7 @@
         x:DataType="vm:MainWindowViewModel"
         x:CompileBindings="True"
         Title="Disk Space Tracker"
-        Icon="avares://DiskSpaceTracker/Assets/logo_48.png"
+        Icon="avares://Disk_Space_Tracker/Assets/logo_48.png"
         Width="535" Height="275"
         MinWidth="535" MinHeight="275"
         Background="{DynamicResource DstBg}"
@@ -57,7 +57,7 @@
                         HorizontalAlignment="Left"
                         VerticalAlignment="Center"
                         Margin="6,0,0,0">
-                <Image Source="avares://DiskSpaceTracker/Assets/logo_24.png"
+                <Image Source="avares://Disk_Space_Tracker/Assets/logo_24.png"
                        Width="20" Height="20"
                        Margin="0,0,8,0"
                        VerticalAlignment="Center"
