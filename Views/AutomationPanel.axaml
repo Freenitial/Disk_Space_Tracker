@@ -39,10 +39,6 @@
                 Content="{Binding Logs.IsVisible, Converter={StaticResource LogsArrowConverter}}"
                 Command="{Binding Logs.ToggleCommand}" />
 
-        <!-- 'Presets' dropdown (rendered via DataTemplate -> PresetMenuButton) -->
-        <ContentControl Canvas.Left="425" Canvas.Top="40" Width="100" Height="20"
-                        Content="{Binding Presets}" />
-
         <!--
           TabControl height = 205 (= tab strip ~22 + 2 border + 179 content area + 2 buffer).
           12px of outer padding remains BELOW the TabControl (255 - 38 header - 205 = 12).
@@ -60,5 +56,10 @@
                 </DataTemplate>
             </TabControl.ContentTemplate>
         </TabControl>
+
+        <!-- 'Presets' dropdown overlays the right side of the tab strip; declared after the
+             TabControl so it paints on top. Rendered via DataTemplate -> PresetMenuButton. -->
+        <ContentControl Canvas.Left="425" Canvas.Top="40" Width="100" Height="20"
+                        Content="{Binding Presets}" />
     </Canvas>
 </UserControl>
