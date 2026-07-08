@@ -14,7 +14,7 @@
     <AssemblyName>Disk_Space_Tracker</AssemblyName>
     <AssemblyTitle>Disk Space Tracker</AssemblyTitle>
     <Product>Disk Space Tracker</Product>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <!-- Multi-resolution ICO embedded in the .exe → shown by Windows Explorer / shortcuts. -->
     <ApplicationIcon>Assets/logo.ico</ApplicationIcon>
