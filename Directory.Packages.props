@@ -6,12 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Avalonia 12.1 nightly (dev line). Bumped to the 2026-06-27 CI build.
-         Comes from the nightly feed configured in NuGet.Config. -->
-    <PackageVersion Include="Avalonia" Version="12.1.999-cibuild0066934-alpha" />
-    <PackageVersion Include="Avalonia.Desktop" Version="12.1.999-cibuild0066934-alpha" />
-    <PackageVersion Include="Avalonia.Themes.Fluent" Version="12.1.999-cibuild0066934-alpha" />
-    <PackageVersion Include="Avalonia.Fonts.Inter" Version="12.1.999-cibuild0066934-alpha" />
+    <!-- Avalonia 12.1 nightly (dev line), from the nightly feed configured in NuGet.Config. -->
+    <PackageVersion Include="Avalonia" Version="12.1.999-cibuild0067332-alpha" />
+    <PackageVersion Include="Avalonia.Desktop" Version="12.1.999-cibuild0067332-alpha" />
+    <PackageVersion Include="Avalonia.Themes.Fluent" Version="12.1.999-cibuild0067332-alpha" />
+    <PackageVersion Include="Avalonia.Fonts.Inter" Version="12.1.999-cibuild0067332-alpha" />
 
     <!-- Static Skia + HarfBuzz (.lib) for NativeAOT single-file. This is the newest build
          published by 2ndLAB (frozen since 2025-11-04); it embeds SkiaSharp 3.119.x, which
